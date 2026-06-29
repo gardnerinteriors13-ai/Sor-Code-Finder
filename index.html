@@ -192,6 +192,19 @@ dialog::backdrop{background:rgba(0,0,0,.72)}
 .result-main::after{content:"View full description";display:block;margin-top:8px;color:var(--accent);font-size:.68rem;font-weight:850;letter-spacing:.02em}
 @media(max-width:420px){.detail-meta{grid-template-columns:1fr}.detail-actions{grid-template-columns:52px 1fr}}
 
+
+/* Accessible search-result highlighting for the dark theme */
+mark{
+  background:linear-gradient(180deg,#f1c27e,#c9914e)!important;
+  color:#171009!important;
+  border:1px solid rgba(255,230,185,.46);
+  border-radius:4px;
+  padding:0 2px;
+  box-shadow:0 1px 0 rgba(0,0,0,.22);
+  -webkit-box-decoration-break:clone;
+  box-decoration-break:clone;
+}
+
 </style>
 </head>
 <body class="dark-app">
@@ -226,7 +239,7 @@ const conceptGroups = [
   ['toilet','wc','w.c','lavatory','closet suite'],
   ['socket','electrical outlet','power point','sso'],
   ['thermal board','insulated plasterboard','thermal plasterboard','insulation board','dry lining'],
-  ['helibar','helical bar','crack stitching','bed joint reinforcement'],
+  ['helibar','heli bar','helical bar','crack stitching','stitch crack','bed joint reinforcement','wall fracture','masonry fracture'],
   ['mould','mold','fungal growth','mildew'],
   ['extractor fan','extract fan','mechanical fan','ventilation fan'],
   ['passive vent','vapour vent','background vent','air vent'],
@@ -251,6 +264,23 @@ const conceptGroups = [
   ['sealant','silicone','mastic'],
   ['bathroom','bath room'],
   ['kitchen unit','base unit','wall unit','cupboard unit'],
+
+];
+
+// Curated terms used on site that do not appear literally in the Schedule of Rates.
+// These suggested codes are surfaced first while the normal text/synonym search still runs underneath.
+const aliasRules = [
+  {terms:['helibar','heli bar','helical bar','crack stitching','stitch crack','masonry crack stitching'],codes:['101901']},
+  {terms:['brick seal','brick sealer','masonry sealer','water repellent brick','seal brickwork'],codes:['436102','436104','436082','436084']},
+  {terms:['passive vent','vapour vent','background vent','sovereign vent'],codes:['115012','115003','115007','115011']},
+  {terms:['cut back concrete','concrete breaching dpc','concrete bridging dpc','lower concrete beside wall','reduce external concrete'],codes:['048003','048001','048007','048005']},
+  {terms:['remove and refit toilet','remove and reinstate toilet','remove refit wc','remove reinstate wc'],codes:['630514','630511','630545','630573']},
+  {terms:['remove and refit socket','remove and reinstate socket','remove refit outlet','remove reinstate outlet'],codes:['860501','860507']},
+  {terms:['thermal board','thermalboard','insulated plasterboard'],codes:['427009','427011']},
+  {terms:['sockit','soket'],codes:['855013','855015','861505','861507','861509','861511']},
+  {terms:['strip wallpaper ceiling','remove wallpaper ceiling','strip paper ceiling'],codes:['451007','451015','451009','451010','451011','451012','451017']},
+  {terms:['render plinth','hack off render plinth','remove render plinth'],codes:['421003','421001','411203','411207']},
+  {terms:['insulate cold water tank','insulate water storage tank','tank insulation'],codes:['670001','670003','670005']},
 ];
 
 function normalise(s){return String(s||'').toLowerCase().replace(/[–—]/g,'-').replace(/[^a-z0-9.]+/g,' ').replace(/\s+/g,' ').trim()}
@@ -281,7 +311,7 @@ function sanitiseState(s){
 DATA.forEach(item=>{item._hay=normalise([item.code,item.trade,item.short,item.element,item.section,item.subsection,item.uom,item.long].join(' '));item._words=[...new Set(item._hay.split(' '))]});
 const codeMap=new Map(DATA.map(i=>[i.code,i]));
 let state=loadState();
-let activeTab='search', lastResults=[], searchTimer, activeDetailCode=null;
+let activeTab='search', lastResults=[], lastTotal=0, searchTimer, activeDetailCode=null;
 
 function currentJob(){return state.jobs.find(j=>j.id===state.currentJobId)||state.jobs[0]}
 function saveState(){currentJob().updatedAt=new Date().toISOString();storage.set(STORAGE_KEY,JSON.stringify(state));renderChrome()}
@@ -300,8 +330,9 @@ function conceptMatch(item,alts){
   if(alts.some(a=>item._hay.includes(a)))return true;
   const base=alts[0];if(base.length<5||base.includes(' '))return false;const limit=base.length>=8?2:1;return item._words.some(w=>levenshteinWithin(base,w,limit));
 }
-function scoreItem(item,query,concepts){
+function scoreItem(item,query,concepts,preferredRank=-1){
   const q=normalise(query),code=normalise(item.code),short=normalise(item.short),long=normalise(item.long);let score=0;
+  if(preferredRank>=0)score+=7000-(preferredRank*500);
   if(code===q)score+=2000;else if(code.startsWith(q))score+=1300;if(short===q)score+=1000;else if(short.startsWith(q))score+=700;else if(short.includes(q))score+=500;if(item._hay.includes(q))score+=220;
   for(const alts of concepts){let best=0;for(const alt of alts){if(code.includes(alt))best=Math.max(best,400);if(short.includes(alt))best=Math.max(best,280);if(normalise(item.element).includes(alt))best=Math.max(best,180);if(normalise(item.section).includes(alt)||normalise(item.subsection).includes(alt))best=Math.max(best,140);if(long.includes(alt))best=Math.max(best,100)}score+=best||30}
   if(state.favourites.includes(item.code))score+=12;if(state.recent.includes(item.code))score+=6;return score;
@@ -311,11 +342,27 @@ function escapeRegex(v){return v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function highlight(text,query){const terms=normalise(query).split(' ').filter(t=>t.length>1).slice(0,8);if(!terms.length)return escapeHtml(text);const rx=new RegExp('('+terms.map(escapeRegex).join('|')+')','ig');return escapeHtml(text).replace(rx,'<mark>$1</mark>')}
 
 function runSearch(){
-  const input=$('searchInput'),q=input?input.value.trim():'';const trade=$('tradeFilter')?.value||'',element=$('elementFilter')?.value||'';const hasFilter=trade||element;
-  if(!q&&!hasFilter){lastResults=[];renderSearchResults();return}
+  const input=$('searchInput'),q=input?input.value.trim():'';const nq=normalise(q);const trade=$('tradeFilter')?.value||'',element=$('elementFilter')?.value||'';const hasFilter=trade||element;
+  if(!q&&!hasFilter){lastResults=[];lastTotal=0;renderSearchResults();return}
   const concepts=conceptsFor(q),ranked=[];
-  for(const item of DATA){if(trade&&item.trade!==trade)continue;if(element&&item.element!==element)continue;if(q&&concepts.some(c=>!conceptMatch(item,c)))continue;ranked.push({item,score:q?scoreItem(item,q,concepts):1})}
-  ranked.sort((a,b)=>b.score-a.score||a.item.code.localeCompare(b.item.code));lastResults=ranked.slice(0,160).map(x=>x.item);renderSearchResults(ranked.length);
+  const preferred=[];
+  for(const rule of aliasRules){
+    if(rule.terms.some(t=>nq.includes(normalise(t)))){
+      for(const code of rule.codes)if(codeMap.has(code)&&!preferred.includes(code))preferred.push(code);
+    }
+  }
+  for(const item of DATA){
+    if(trade&&item.trade!==trade)continue;
+    if(element&&item.element!==element)continue;
+    const preferredRank=preferred.indexOf(item.code);
+    const regularMatch=!q||concepts.every(c=>conceptMatch(item,c));
+    if(!regularMatch&&preferredRank<0)continue;
+    ranked.push({item,score:q?scoreItem(item,q,concepts,preferredRank):1});
+  }
+  ranked.sort((a,b)=>b.score-a.score||a.item.code.localeCompare(b.item.code));
+  lastTotal=ranked.length;
+  lastResults=ranked.slice(0,160).map(x=>x.item);
+  renderSearchResults(lastTotal);
 }
 function cardHtml(item,query=''){
   const selected=itemInJob(item.code),fav=state.favourites.includes(item.code);
@@ -341,7 +388,7 @@ function renderJobs(){
 function formatDate(v){try{return new Intl.DateTimeFormat('en-GB',{day:'2-digit',month:'short'}).format(new Date(v))}catch{return''}}
 function renderChrome(){
   const job=currentJob();$('currentJobName').textContent=job.name;$('currentJobRef').textContent=job.reference||'No reference';$('bottomJobName').textContent=job.name;$('bottomCount').textContent=`${job.items.length} ${job.items.length===1?'code':'codes'} selected`;$('workListBtn').disabled=!job.items.length;$('favTabBadge').textContent=state.favourites.length;$('favTabBadge').hidden=!state.favourites.length;renderWorkList();
-  if(activeTab==='favourites')renderFavourites();if(activeTab==='recent')renderRecent();if(activeTab==='jobs')renderJobs();if(activeTab==='search')renderSearchResults(lastResults.length||undefined);
+  if(activeTab==='favourites')renderFavourites();if(activeTab==='recent')renderRecent();if(activeTab==='jobs')renderJobs();if(activeTab==='search')renderSearchResults(lastTotal||undefined);
 }
 function renderDetailActions(){
   if(!activeDetailCode)return;
