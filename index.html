@@ -235,13 +235,177 @@ mark{
   border-color:rgba(239,196,134,.24)!important;
 }
 
+
+
+/* ===== Final premium practical polish ===== */
+:root{
+  --ink:#f2f3f5;
+  --muted:#9298a2;
+  --line:#232832;
+  --paper:#07090c;
+  --card:#0d1015;
+  --brand:#c89555;
+  --brand2:#9b7040;
+  --accent:#d6a25f;
+  --danger:#d17777;
+  --success:#6eb991;
+  --shadow:0 12px 28px rgba(0,0,0,.28);
+}
+html,body.dark-app{background:#07090c;color:var(--ink)}
+body.dark-app{background:radial-gradient(circle at 50% -80px,rgba(200,149,85,.07),transparent 320px),#07090c}
+body.dark-app::before{display:none}
+.app{padding-bottom:176px}
+
+/* Slim brand header */
+.topbar{
+  margin:0;
+  padding:max(15px,env(safe-area-inset-top)) 15px 9px;
+  min-height:66px;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+.brandline{gap:10px;align-items:center}
+.logo{
+  width:37px;height:37px;border-radius:11px;
+  background:#11151b;color:var(--accent);
+  border:1px solid #313743;
+  box-shadow:none;font-size:.73rem;letter-spacing:.04em
+}
+h1{font-size:1.2rem;line-height:1.05;margin:0;color:#f5f5f5}
+.brand-tagline{margin-top:4px;font-size:.61rem;letter-spacing:.16em;color:#7f858e}
+.header-actions{gap:7px}
+.icon-btn{width:37px;height:37px;border-radius:11px;background:#101319;border-color:#252b35;color:#d7d9dd;box-shadow:none}
+.brand-credit{display:none!important}
+
+/* Current job strip */
+.job-strip{
+  margin:0 13px 10px;padding:9px 11px;border-radius:13px;
+  background:#0d1015;border:1px solid #20252e!important;box-shadow:none!important
+}
+.job-strip .job-name{font-size:.9rem;color:#eef0f2}
+.job-strip small{font-size:.68rem;color:#777e88}
+.job-switch{padding:7px 9px;border-radius:9px;background:#13171d;color:#c4c8cd;border:1px solid #272d37;font-size:.72rem}
+
+/* Search panel */
+.panel{margin:0 13px 10px;padding:11px;border-radius:15px;background:#0d1015;border:1px solid #20252e!important;box-shadow:none!important}
+.search-box{border-radius:12px;background:#080b0f;border:1px solid #252b35;padding:0 9px}
+.search-box:focus-within{background:#0b0e13;border-color:#7e603b;box-shadow:0 0 0 3px rgba(200,149,85,.07)}
+.search-box input{padding:11px 8px;color:#f1f2f4}
+.filters{gap:7px;margin-top:8px}
+select,input.field,textarea.field,.work-fields input,.work-fields select,.work-fields textarea{background:#090c10;border-color:#242a33;color:#e9eaec;border-radius:10px}
+.search-meta{margin-top:8px;color:#838a94}.text-btn{color:#b7bbc1}
+
+/* Compact native-feeling cards */
+.results{padding:0 13px 24px;gap:8px}
+.result-card{
+  min-height:0!important;padding:11px 10px 10px;border-radius:13px;
+  background:#0d1015!important;border:1px solid #20252e!important;
+  box-shadow:none!important;gap:8px
+}
+.result-card.selected{background:#12130f!important;border-color:#6e5638!important}
+.result-card:hover,.job-card:hover,.work-item:hover{transform:none}
+.code-row{gap:5px;margin-bottom:5px}
+.code{font-size:.96rem;color:var(--accent)}
+.copy-code{padding:3px 6px;border-radius:7px;background:rgba(200,149,85,.07);border-color:rgba(200,149,85,.22);box-shadow:none}
+.copy-code::after{font-size:.63em;opacity:.58}
+.pill{padding:2px 6px;background:#151920;color:#8f96a0;border:1px solid #242a34;font-size:.61rem}
+.copy-count{background:rgba(200,149,85,.11)!important;color:#dcb173!important;border-color:rgba(200,149,85,.2)!important}
+.short{font-size:.87rem;line-height:1.28;font-weight:720;color:#e7e9ec}
+.path{margin-top:5px;font-size:.65rem;line-height:1.25;color:#737b86;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-main::after{content:"Tap for full description";margin-top:6px;color:#727a85;font-size:.62rem;font-weight:700}
+.card-actions{gap:6px}
+.star,.add-mark{width:31px;height:31px;border-radius:9px}
+.star{background:#13171d;color:#666e79;font-size:1rem;border:1px solid #232933}
+.star.on{background:rgba(200,149,85,.1);color:var(--accent);border-color:rgba(200,149,85,.23)}
+.add-mark{background:linear-gradient(135deg,#d8aa6d,#b77e42);color:#171008;font-size:1.02rem;box-shadow:none}
+.selected .add-mark{background:#272c33;color:#d6a25f;border:1px solid #47402f}
+mark{background:#d7a45e;color:#171008;border-radius:3px;padding:0 2px}
+
+/* Purpose-built compact Most Copied grid */
+#searchResults.most-used-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#searchResults.most-used-grid::before{
+  content:"MOST COPIED";grid-column:1/-1;color:#777f89;font-size:.64rem;font-weight:850;letter-spacing:.12em;padding:2px 2px 0
+}
+#searchResults.most-used-grid .result-card{position:relative;display:block;min-height:126px!important;padding:11px}
+#searchResults.most-used-grid .result-main{padding-bottom:33px}
+#searchResults.most-used-grid .pill:not(.copy-count){display:none}
+#searchResults.most-used-grid .path{display:none}
+#searchResults.most-used-grid .short{font-size:.8rem;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#searchResults.most-used-grid .result-main::after{display:none}
+#searchResults.most-used-grid .card-actions{position:absolute;right:9px;bottom:9px;display:flex;flex-direction:row}
+#searchResults.most-used-grid .star{display:none}
+#searchResults.most-used-grid .add-mark{width:29px;height:29px}
+
+/* Fixed bottom navigation */
+.tabs{
+  position:fixed;left:50%;right:auto;top:auto;bottom:0;transform:translateX(-50%);
+  width:min(820px,100%);margin:0;padding:7px 8px max(7px,env(safe-area-inset-bottom));
+  border-radius:0;border:0!important;border-top:1px solid #20252e!important;
+  background:rgba(8,10,14,.96)!important;box-shadow:0 -8px 22px rgba(0,0,0,.25)!important;
+  backdrop-filter:blur(18px);z-index:24;display:grid;grid-template-columns:repeat(4,1fr);gap:2px
+}
+.tab{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:52px;padding:4px 2px;border-radius:10px;color:#727a84;font-size:.62rem;font-weight:760}
+.tab.active{background:transparent;color:var(--accent);box-shadow:none}
+.nav-icon{font-size:1.22rem;line-height:1}
+.nav-label{white-space:nowrap}
+.tab.active::before{content:"";position:absolute;top:0;width:22px;height:2px;border-radius:99px;background:var(--accent)}
+.tab .badge{position:absolute;top:3px;left:calc(50% + 8px);min-width:16px;height:16px;padding:0 4px;display:grid;place-items:center;background:#b47d42;color:#111;border:0;font-size:.56rem}
+
+/* Floating current job bar sits above navigation */
+.selection-bar{
+  bottom:calc(67px + env(safe-area-inset-bottom));width:min(794px,calc(100% - 20px));
+  padding:9px 10px;background:rgba(14,17,22,.96);border:1px solid #272d36!important;
+  border-radius:14px;box-shadow:0 12px 30px rgba(0,0,0,.4)!important;z-index:22
+}
+.selection-summary strong{font-size:.82rem}.selection-summary span{font-size:.66rem;color:#767e88}
+.selection-bar .primary-btn{padding:9px 12px;border-radius:10px}
+.fab{bottom:calc(132px + env(safe-area-inset-bottom));padding:10px 14px;box-shadow:0 9px 22px rgba(0,0,0,.38)}
+.toast{bottom:calc(140px + env(safe-area-inset-bottom))}
+
+/* Other pages and sheets */
+.section-head{margin:3px 14px 8px}.section-head h2{font-size:1rem}.section-head span{font-size:.7rem;color:#777f89}
+.recent-subhead{margin-top:16px}
+.job-card,.work-item{background:#0d1015!important;border-color:#20252e!important;box-shadow:none!important}
+.primary-btn,.fab{background:linear-gradient(135deg,#d8aa6d,#b77e42);color:#171008;box-shadow:none}
+.secondary-btn,.small-btn,.remove-btn,.file-label{background:#11151a;border-color:#272d36;color:#d7d9dd}
+.bottom-sheet,dialog{background:linear-gradient(180deg,#101319,#090b0f);border-color:#242a33!important}
+.sheet-header,.selected-item,.work-item,.settings-group,.dialog-head,.sheet-actions{border-color:#242a33}
+.detail-description{background:#0b0e12;border-color:#272d36}.detail-description p{color:#d5d8dc}
+.credit-group{background:#0b0e12;border-color:#282e37}.credit-group h3{color:var(--accent)}
+
+/* Launch identity */
+.app-splash{
+  position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:radial-gradient(circle at center,rgba(200,149,85,.10),transparent 34%),#07090c;
+  transition:opacity .42s ease,visibility .42s ease
+}
+.app-splash.hide{opacity:0;visibility:hidden;pointer-events:none}
+.splash-mark{width:70px;height:70px;border-radius:20px;display:grid;place-items:center;background:#11151b;border:1px solid #353b46;color:var(--accent);font-weight:950;letter-spacing:.06em;margin-bottom:17px}
+.splash-title{font-size:1.55rem;font-weight:850;color:#f4f4f4}
+.splash-tagline{margin-top:7px;color:#9b7a52;font-size:.69rem;letter-spacing:.2em;text-transform:uppercase}
+.splash-credit{margin-top:28px;color:#737a84;font-size:.72rem}
+
+@media(min-width:680px){
+  #searchResults.most-used-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .result-card{min-height:0!important}
+  .fab{right:calc((100vw - 820px)/2 + 18px)}
+}
+@media(max-width:370px){
+  .nav-label{font-size:.56rem}
+  .selection-summary{max-width:58%}
+  #searchResults.most-used-grid{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body class="dark-app">
+<div id="appSplash" class="app-splash" aria-hidden="true"><div class="splash-mark">SOR</div><div class="splash-title">SOR Code Finder</div><div class="splash-tagline">Find. Specify. Survey.</div><div class="splash-credit">Not a normal Gardner Interiors build</div></div>
 <div class="app">
-<header class="topbar"><div class="brandline"><div class="logo">SOR</div><div><div class="eyebrow">Schedule of Rates</div><h1>SOR Code Finder</h1><div class="brand-tagline">Find. Specify. Survey.</div></div></div><div class="header-actions"><button id="newJobTopBtn" class="icon-btn" aria-label="New job">＋</button><button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙</button></div></header><section class="brand-credit" aria-label="Build credit"><span>✦ Not a normal Gardner Interiors build ✦</span><small>Crafted by Gardner Interiors</small></section>
+<header class="topbar"><div class="brandline"><div class="logo">SOR</div><div><h1>SOR Code Finder</h1><div class="brand-tagline">Find. Specify. Survey.</div></div></div><div class="header-actions"><button id="newJobTopBtn" class="icon-btn" aria-label="Create a new job">＋</button><button id="settingsBtn" class="icon-btn" aria-label="Open settings">⚙</button></div></header>
 <section class="job-strip"><div style="min-width:0"><div id="currentJobName" class="job-name"></div><small id="currentJobRef"></small></div><button id="jobSwitchBtn" class="job-switch">Switch job</button></section>
-<nav class="tabs" aria-label="App sections"><button class="tab active" data-tab="search">Search</button><button class="tab" data-tab="favourites">Favourites <span id="favTabBadge" class="badge" hidden></span></button><button class="tab" data-tab="recent">Recent</button><button class="tab" data-tab="jobs">Jobs</button></nav>
+<nav class="tabs" aria-label="App sections"><button class="tab active" data-tab="search"><span class="nav-icon" aria-hidden="true">⌕</span><span class="nav-label">Search</span></button><button class="tab" data-tab="recent"><span class="nav-icon" aria-hidden="true">↗</span><span class="nav-label">Most copied</span></button><button class="tab" data-tab="favourites"><span class="nav-icon" aria-hidden="true">★</span><span class="nav-label">Favourites</span><span id="favTabBadge" class="badge" hidden></span></button><button class="tab" data-tab="jobs"><span class="nav-icon" aria-hidden="true">▣</span><span class="nav-label">Jobs</span></button></nav>
 <main>
 <section id="searchView" class="view active"><div class="panel"><label class="search-box"><span class="search-icon">⌕</span><input id="searchInput" type="search" autocomplete="off" placeholder="Try ‘remove toilet’ or ‘helibar’…"><button id="clearSearchBtn" class="clear-search" type="button" aria-label="Clear">×</button></label><div class="filters"><select id="tradeFilter"><option value="">All trades</option></select><select id="elementFilter"><option value="">All elements</option></select></div><div class="search-meta"><span id="resultCount"></span><button id="resetFiltersBtn" class="text-btn">Reset filters</button></div></div><div id="searchResults" class="results"></div></section>
 <section id="favouritesView" class="view"><div class="section-head"><h2>Favourite codes</h2><span id="favCount"></span></div><div id="favouriteResults" class="results"></div></section>
@@ -409,8 +573,9 @@ function mostCopiedEntries(limit=12){return Object.entries(state.copiedCounts||{
 function renderMostCopied(){const ranked=mostCopiedEntries(20),items=ranked.map(([code,count])=>({...codeMap.get(code),_displayCopyCount:Number(count)}));$('mostCopiedCount').textContent=ranked.length?`${ranked.length} ranked`:'No copies yet';renderCards($('mostCopiedResults'),items,'No copied codes yet','Tap any SOR code to copy it. Your most copied codes will build automatically.')}
 function renderSearchResults(total){
   const q=$('searchInput')?.value||'',trade=$('tradeFilter')?.value||'',element=$('elementFilter')?.value||'';
-  if(!q&&!trade&&!element){const ranked=mostCopiedEntries(8),suggested=ranked.length?ranked.map(([code,count])=>({...codeMap.get(code),_displayCopyCount:Number(count)})):state.recent.map(c=>codeMap.get(c)).filter(Boolean).slice(0,8);$('resultCount').textContent=ranked.length?'Most copied codes':`Search ${DATA.length.toLocaleString()} codes`;renderCards($('searchResults'),suggested,'Find the right SOR code fast','Try “remove toilet”, “thermal board”, “helibar” or a code.');return}
-  $('resultCount').textContent=total>160?`${total.toLocaleString()} matches · best 160 shown`:`${(total??lastResults.length).toLocaleString()} ${(total??lastResults.length)===1?'match':'matches'}`;renderCards($('searchResults'),lastResults,'No matching codes','Try fewer words, a synonym or reset the filters.',q)
+  const results=$('searchResults');
+  if(!q&&!trade&&!element){const ranked=mostCopiedEntries(8),suggested=ranked.length?ranked.map(([code,count])=>({...codeMap.get(code),_displayCopyCount:Number(count)})):state.recent.map(c=>codeMap.get(c)).filter(Boolean).slice(0,8);results.classList.toggle('most-used-grid',ranked.length>0);$('resultCount').textContent=ranked.length?'Your most used':`Search ${DATA.length.toLocaleString()} codes`;renderCards(results,suggested,'Find the right SOR code fast','Try “remove toilet”, “thermal board”, “helibar” or a code.');return}
+  results.classList.remove('most-used-grid');$('resultCount').textContent=total>160?`${total.toLocaleString()} matches · best 160 shown`:`${(total??lastResults.length).toLocaleString()} ${(total??lastResults.length)===1?'match':'matches'}`;renderCards(results,lastResults,'No matching codes','Try fewer words, a synonym or reset the filters.',q)
 }
 function renderFavourites(){const items=state.favourites.map(c=>codeMap.get(c)).filter(Boolean);$('favCount').textContent=`${items.length} saved`;renderCards($('favouriteResults'),items,'No favourites yet','Tap the star beside codes you use regularly.')}
 function renderRecent(){renderMostCopied();const items=state.recent.map(c=>codeMap.get(c)).filter(Boolean);$('recentCount').textContent=`${items.length} recent`;renderCards($('recentResults'),items,'Nothing used yet','Codes you add to jobs will appear here.')}
@@ -487,5 +652,8 @@ function init(){
   renderAll();
 }
 init();
+</script>
+<script>
+(function(){const splash=document.getElementById('appSplash');if(!splash)return;setTimeout(()=>splash.classList.add('hide'),850);setTimeout(()=>splash.remove(),1450)})();
 </script>
 </body></html>
