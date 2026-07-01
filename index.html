@@ -226,6 +226,15 @@ mark{
 .detail-code.copy-code{display:inline-flex;width:auto;margin:0 0 7px;text-align:left}
 .result-main{border:0;background:transparent;text-align:left;padding:0;color:inherit;min-width:0}
 
+
+/* Most copied codes */
+.recent-subhead{margin-top:20px}
+.copy-count{
+  background:linear-gradient(135deg,rgba(239,196,134,.22),rgba(176,123,59,.14))!important;
+  color:#f2c98e!important;
+  border-color:rgba(239,196,134,.24)!important;
+}
+
 </style>
 </head>
 <body class="dark-app">
@@ -236,7 +245,7 @@ mark{
 <main>
 <section id="searchView" class="view active"><div class="panel"><label class="search-box"><span class="search-icon">⌕</span><input id="searchInput" type="search" autocomplete="off" placeholder="Try ‘remove toilet’ or ‘helibar’…"><button id="clearSearchBtn" class="clear-search" type="button" aria-label="Clear">×</button></label><div class="filters"><select id="tradeFilter"><option value="">All trades</option></select><select id="elementFilter"><option value="">All elements</option></select></div><div class="search-meta"><span id="resultCount"></span><button id="resetFiltersBtn" class="text-btn">Reset filters</button></div></div><div id="searchResults" class="results"></div></section>
 <section id="favouritesView" class="view"><div class="section-head"><h2>Favourite codes</h2><span id="favCount"></span></div><div id="favouriteResults" class="results"></div></section>
-<section id="recentView" class="view"><div class="section-head"><h2>Recently used</h2><span id="recentCount"></span></div><div id="recentResults" class="results"></div></section>
+<section id="recentView" class="view"><div class="section-head"><h2>Most copied</h2><span id="mostCopiedCount"></span></div><div id="mostCopiedResults" class="results"></div><div class="section-head recent-subhead"><h2>Recently used</h2><span id="recentCount"></span></div><div id="recentResults" class="results"></div></section>
 <section id="jobsView" class="view"><div class="section-head"><h2>Saved jobs</h2><span>Property work lists</span></div><div id="jobList" class="job-list"></div></section>
 </main>
 <button id="newJobFab" class="fab" hidden>＋ New job</button>
@@ -313,7 +322,7 @@ const storage={
 };
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8)}
 function newJob(name='My first job',reference=''){return{id:uid(),name,reference,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),items:[]}}
-function defaultState(){const job=newJob();return{version:3,currentJobId:job.id,jobs:[job],favourites:[],recent:[]}}
+function defaultState(){const job=newJob();return{version:4,currentJobId:job.id,jobs:[job],favourites:[],recent:[],copiedCounts:{}}}
 function loadState(){
   const saved=safeParse(storage.get(STORAGE_KEY),null);
   if(saved && Array.isArray(saved.jobs) && saved.jobs.length){return sanitiseState(saved)}
@@ -323,8 +332,9 @@ function loadState(){
   return state;
 }
 function sanitiseState(s){
-  s.version=3;s.favourites=Array.isArray(s.favourites)?[...new Set(s.favourites.filter(c=>codeMap.has(c)))]:[];
+  s.version=4;s.favourites=Array.isArray(s.favourites)?[...new Set(s.favourites.filter(c=>codeMap.has(c)))]:[];
   s.recent=Array.isArray(s.recent)?[...new Set(s.recent.filter(c=>codeMap.has(c)))].slice(0,50):[];
+  const rawCounts=s.copiedCounts&&typeof s.copiedCounts==='object'?s.copiedCounts:{};s.copiedCounts={};for(const [code,count] of Object.entries(rawCounts)){const n=Math.floor(Number(count));if(codeMap.has(code)&&Number.isFinite(n)&&n>0)s.copiedCounts[code]=n;}
   s.jobs=(s.jobs||[]).map(j=>({id:j.id||uid(),name:j.name||'Untitled job',reference:j.reference||'',createdAt:j.createdAt||new Date().toISOString(),updatedAt:j.updatedAt||new Date().toISOString(),items:Array.isArray(j.items)?j.items.filter(i=>codeMap.has(i.code)).map(i=>({code:i.code,qty:String(i.qty??'1'),location:i.location||'',note:i.note||'',addedAt:i.addedAt||new Date().toISOString()})):[]}));
   if(!s.jobs.length)s.jobs=[newJob()];if(!s.jobs.some(j=>j.id===s.currentJobId))s.currentJobId=s.jobs[0].id;return s;
 }
@@ -389,19 +399,21 @@ function cardHtml(item,query=''){
   const selected=itemInJob(item.code),fav=state.favourites.includes(item.code);
   return `<article class="result-card${selected?' selected':''}" data-code="${item.code}">
     <div class="result-main" data-action="details" role="button" tabindex="0" aria-label="View full description for ${item.code}">
-      <div class="code-row"><button class="code copy-code" type="button" data-action="copy-code" aria-label="Copy code ${item.code}" title="Tap to copy">${escapeHtml(item.code)}</button>${item.trade?`<span class="pill">${escapeHtml(item.trade)}</span>`:''}${item.uom?`<span class="pill">${escapeHtml(item.uom)}</span>`:''}</div>
+      <div class="code-row"><button class="code copy-code" type="button" data-action="copy-code" aria-label="Copy code ${item.code}" title="Tap to copy">${escapeHtml(item.code)}</button>${item.trade?`<span class="pill">${escapeHtml(item.trade)}</span>`:''}${item.uom?`<span class="pill">${escapeHtml(item.uom)}</span>`:''}${item._displayCopyCount?`<span class="pill copy-count">${item._displayCopyCount} ${item._displayCopyCount===1?'copy':'copies'}</span>`:''}</div>
       <div class="short">${highlight(item.short||item.long,query)}</div><div class="path">${escapeHtml([item.element,item.section,item.subsection].filter(Boolean).join(' › '))}</div>
     </div><div class="card-actions"><button class="star${fav?' on':''}" type="button" data-action="favourite" aria-label="${fav?'Remove favourite':'Add favourite'}">★</button><button class="add-mark" type="button" data-action="toggle-code" aria-label="${selected?'Remove from current job':'Add to current job'}">${selected?'✓':'+'}</button></div></article>`;
 }
 function bindCards(container){container.querySelectorAll('.result-card').forEach(card=>{card.addEventListener('click',e=>{const action=e.target.closest('[data-action]')?.dataset.action;if(!action)return;const code=card.dataset.code;if(action==='copy-code'){copyCode(code);return}if(action==='details')openCodeDetail(code);if(action==='favourite')toggleFavourite(code);if(action==='toggle-code')toggleCode(code)});const main=card.querySelector('.result-main');main?.addEventListener('keydown',e=>{if(e.target!==main)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();openCodeDetail(card.dataset.code)}})})}
 function renderCards(container,items,emptyTitle,emptyText,query=''){if(!items.length){container.innerHTML=`<div class="empty"><strong>${escapeHtml(emptyTitle)}</strong><span>${escapeHtml(emptyText)}</span></div>`;return}container.innerHTML=items.map(i=>cardHtml(i,query)).join('');bindCards(container)}
+function mostCopiedEntries(limit=12){return Object.entries(state.copiedCounts||{}).filter(([code,count])=>codeMap.has(code)&&Number(count)>0).sort((a,b)=>Number(b[1])-Number(a[1])||a[0].localeCompare(b[0])).slice(0,limit)}
+function renderMostCopied(){const ranked=mostCopiedEntries(20),items=ranked.map(([code,count])=>({...codeMap.get(code),_displayCopyCount:Number(count)}));$('mostCopiedCount').textContent=ranked.length?`${ranked.length} ranked`:'No copies yet';renderCards($('mostCopiedResults'),items,'No copied codes yet','Tap any SOR code to copy it. Your most copied codes will build automatically.')}
 function renderSearchResults(total){
   const q=$('searchInput')?.value||'',trade=$('tradeFilter')?.value||'',element=$('elementFilter')?.value||'';
-  if(!q&&!trade&&!element){const suggested=state.recent.map(c=>codeMap.get(c)).filter(Boolean).slice(0,8);$('resultCount').textContent=`Search ${DATA.length.toLocaleString()} codes`;renderCards($('searchResults'),suggested,'Find the right SOR code fast','Try “remove toilet”, “thermal board”, “helibar” or a code.');return}
+  if(!q&&!trade&&!element){const ranked=mostCopiedEntries(8),suggested=ranked.length?ranked.map(([code,count])=>({...codeMap.get(code),_displayCopyCount:Number(count)})):state.recent.map(c=>codeMap.get(c)).filter(Boolean).slice(0,8);$('resultCount').textContent=ranked.length?'Most copied codes':`Search ${DATA.length.toLocaleString()} codes`;renderCards($('searchResults'),suggested,'Find the right SOR code fast','Try “remove toilet”, “thermal board”, “helibar” or a code.');return}
   $('resultCount').textContent=total>160?`${total.toLocaleString()} matches · best 160 shown`:`${(total??lastResults.length).toLocaleString()} ${(total??lastResults.length)===1?'match':'matches'}`;renderCards($('searchResults'),lastResults,'No matching codes','Try fewer words, a synonym or reset the filters.',q)
 }
 function renderFavourites(){const items=state.favourites.map(c=>codeMap.get(c)).filter(Boolean);$('favCount').textContent=`${items.length} saved`;renderCards($('favouriteResults'),items,'No favourites yet','Tap the star beside codes you use regularly.')}
-function renderRecent(){const items=state.recent.map(c=>codeMap.get(c)).filter(Boolean);$('recentCount').textContent=`${items.length} recent`;renderCards($('recentResults'),items,'Nothing used yet','Codes you add to jobs will appear here.')}
+function renderRecent(){renderMostCopied();const items=state.recent.map(c=>codeMap.get(c)).filter(Boolean);$('recentCount').textContent=`${items.length} recent`;renderCards($('recentResults'),items,'Nothing used yet','Codes you add to jobs will appear here.')}
 function renderJobs(){
   const list=$('jobList');list.innerHTML=state.jobs.slice().sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt)).map(job=>`<article class="job-card${job.id===state.currentJobId?' active-job':''}" data-id="${job.id}"><div class="job-card-head"><div><div class="job-title">${escapeHtml(job.name)}</div><div class="job-ref">${escapeHtml(job.reference||'No reference')}</div></div>${job.id===state.currentJobId?'<span class="pill">Current</span>':''}</div><div class="job-stats"><span class="pill">${job.items.length} ${job.items.length===1?'code':'codes'}</span><span class="pill">Updated ${formatDate(job.updatedAt)}</span></div><div class="job-actions"><button class="small-btn primary" data-job-action="open">Open</button><button class="small-btn" data-job-action="edit">Edit</button><button class="small-btn danger" data-job-action="delete">Delete</button></div></article>`).join('');
   list.querySelectorAll('.job-card').forEach(card=>card.addEventListener('click',e=>{const action=e.target.dataset.jobAction;if(!action)return;const id=card.dataset.id;if(action==='open'){state.currentJobId=id;saveState();switchTab('search');showToast('Job opened')}if(action==='edit')openJobDialog(id);if(action==='delete')deleteJob(id)}));
@@ -450,7 +462,9 @@ function deleteJob(id){const job=state.jobs.find(j=>j.id===id);if(!job)return;if
 function scheduleText(){return currentJob().items.map(w=>{const d=codeMap.get(w.code);return [w.code,`Qty ${w.qty||'1'}${d?.uom?` ${d.uom}`:''}`,w.location,w.note].filter(Boolean).join(' — ')}).join('\n')}
 async function copyCode(code){
   try{await navigator.clipboard.writeText(code)}catch{const ta=document.createElement('textarea');ta.value=code;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}
-  showToast(`${code} copied`)
+  state.copiedCounts=state.copiedCounts||{};state.copiedCounts[code]=(Number(state.copiedCounts[code])||0)+1;storage.set(STORAGE_KEY,JSON.stringify(state));
+  if(activeTab==='recent')renderMostCopied();if(activeTab==='search'&&!($('searchInput')?.value||'').trim()&&!$('tradeFilter')?.value&&!$('elementFilter')?.value)renderSearchResults();
+  showToast(`${code} copied · ${state.copiedCounts[code]} ${state.copiedCounts[code]===1?'copy':'copies'}`)
 }
 async function copyText(text,label){try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}showToast(label);$('copyDialog').close()}
 function exportTxt(){const job=currentJob(),head=[job.name,job.reference].filter(Boolean).join(' — ');const text=`${head}\n${'='.repeat(Math.min(head.length,60))}\n${scheduleText()}\n`;downloadBlob(text,`${fileSafe(job.name)}-SOR-codes.txt`,'text/plain');showToast('Work list exported')}
