@@ -1,37 +1,32 @@
 # SOR Code Finder & Tenant Report Builder
 
-A small static web app for Healthy Homes / damp and mould survey notes.
+Version 2.1
 
-## What it does
+A browser-based Healthy Homes tool for finding SOR codes and building tenant-friendly damp and mould reports.
 
-- Search common SOR codes and works wording
-- Click survey findings and recommended works
-- Generate a tenant-friendly report
-- Generate an internal SOR/action list
-- Copy the report or export actions as CSV
-- Save drafts locally in the browser
-- Add custom wording/code items without editing the source code
+## What's in this version
+
+- Full SOR code book loaded from the v7.2 SOR spreadsheet
+- Searchable SOR Code Finder
+- Curated Healthy Homes report builder options
+- Tenant-friendly report output
+- Internal SOR/action list
+- Custom wording/code bank saved locally in the browser
+- Copy, print/PDF and CSV export tools
+- Mobile-friendly static app for GitHub Pages
 
 ## Files
 
-- `index.html` - page layout
-- `style.css` - styling and mobile layout
-- `data.js` - default wording bank and SOR items
-- `app.js` - app behaviour/report generation
-- `manifest.webmanifest` - basic install metadata
+- `index.html` - app layout
+- `style.css` - styling
+- `app.js` - app logic
+- `data.js` - curated report items and full SOR code book
+- `manifest.webmanifest` - install metadata
 
-## Publish with GitHub Pages
+## Deploy on GitHub Pages
 
-1. Go to the repository Settings.
-2. Open Pages.
-3. Choose `Deploy from a branch`.
-4. Select `main` and `/root`.
-5. Save.
-
-Your live app will normally be available at:
+Upload these files into the repository root. The live app should then run from:
 
 `https://gardnerinteriors13-ai.github.io/Sor-Code-Finder/`
 
-## Notes
-
-Some items are marked `Non-SOR` or `TBC` where the exact SOR code was not confirmed. Keep those as prompts to check before issuing works orders.
+Do not upload the enclosing folder unless you intend to serve the app from a subfolder.

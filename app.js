@@ -2,6 +2,7 @@ const STORAGE_KEY = "sorTenantReportDraft.v2";
 const CUSTOM_KEY = "sorTenantReportCustomBank.v2";
 
 const baseItems = window.SOR_APP_DATA || [];
+const codeBook = window.SOR_CODE_BOOK || [];
 let customItems = loadJSON(CUSTOM_KEY, []);
 let selectedIds = new Set();
 let currentCategory = "All";
@@ -37,25 +38,77 @@ function normalise(value = "") {
   return String(value).toLowerCase().trim();
 }
 
-function itemMatches(item, query) {
-  if (!query) return true;
-  const haystack = [item.title, item.category, item.code, item.description, item.internalWording, item.tenantText, ...(item.tags || [])].join(" ").toLowerCase();
-  return haystack.includes(query);
+function tokenMatches(haystack, word) {
+  if (/^\d+$/.test(word)) return haystack.includes(word);
+  if (word.length <= 2) {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`).test(haystack);
+  }
+  return haystack.includes(word);
 }
 
-function getCategories() {
+function itemMatches(item, query) {
+  if (!query) return true;
+  const words = normalise(query).split(/\s+/).filter(Boolean);
+  const haystack = normalise([
+    item.title,
+    item.category,
+    item.section,
+    item.subsection,
+    item.trade,
+    item.code,
+    item.description,
+    item.internalWording,
+    item.tenantText,
+    ...(item.tags || [])
+  ].join(" "));
+  return words.every(word => tokenMatches(haystack, word));
+}
+
+function allCodeItems() {
+  const curated = allItems()
+    .filter(item => item.code)
+    .map(item => ({ ...item, source: "Common actions" }));
+
+  const seen = new Set(curated.map(item => `${item.code || ""}|${item.description || item.title || ""}`));
+  const book = codeBook
+    .filter(item => item.code)
+    .filter(item => {
+      const key = `${item.code || ""}|${item.description || item.title || ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(item => ({ ...item, source: "Full SOR code book" }));
+
+  return [...curated, ...book];
+}
+
+function getBuilderCategories() {
   return ["All", ...Array.from(new Set(allItems().map(item => item.category))).sort()];
 }
 
+function getCodeCategories() {
+  return ["All", ...Array.from(new Set(allCodeItems().map(item => item.category || "SOR Code Book"))).sort()];
+}
+
 function populateFilters() {
-  const categories = getCategories();
-  for (const id of ["categoryFilter", "codeCategoryFilter"]) {
-    const select = $(id);
-    if (!select) continue;
-    const current = select.value || "All";
-    select.innerHTML = categories.map(cat => `<option${cat === current ? " selected" : ""}>${escapeHTML(cat)}</option>`).join("");
+  const builderCategories = getBuilderCategories();
+  const codeCategories = getCodeCategories();
+
+  const builderSelect = $("categoryFilter");
+  if (builderSelect) {
+    const current = builderSelect.value || currentCategory || "All";
+    builderSelect.innerHTML = builderCategories.map(cat => `<option${cat === current ? " selected" : ""}>${escapeHTML(cat)}</option>`).join("");
   }
-  renderChips(categories);
+
+  const codeSelect = $("codeCategoryFilter");
+  if (codeSelect) {
+    const current = codeSelect.value || currentCodeCategory || "All";
+    codeSelect.innerHTML = codeCategories.map(cat => `<option${cat === current ? " selected" : ""}>${escapeHTML(cat)}</option>`).join("");
+  }
+
+  renderChips(builderCategories);
 }
 
 function renderChips(categories) {
@@ -265,18 +318,50 @@ function setToday() {
 function renderCodeResults() {
   const query = normalise($("codeSearch")?.value || "");
   const category = currentCodeCategory;
-  const items = allItems().filter(item => item.code && (category === "All" || item.category === category) && itemMatches(item, query));
-  if ($("codeCount")) $("codeCount").textContent = `${items.length} result${items.length === 1 ? "" : "s"}`;
   const wrap = $("codeResults");
   if (!wrap) return;
-  if (!items.length) {
-    wrap.innerHTML = `<div class="empty">No code found. Add it in the wording bank once you find the elusive little gremlin.</div>`;
+
+  const allCodes = allCodeItems();
+  const filtered = allCodes.filter(item =>
+    item.code &&
+    (category === "All" || item.category === category) &&
+    itemMatches(item, query)
+  );
+
+  const totalLoaded = codeBook.length;
+  const limit = 120;
+  const visible = filtered.slice(0, limit);
+
+  if ($("codeCount")) {
+    if (!query && category === "All") $("codeCount").textContent = `${totalLoaded.toLocaleString()} codes loaded`;
+    else $("codeCount").textContent = `${filtered.length.toLocaleString()} result${filtered.length === 1 ? "" : "s"}`;
+  }
+
+  if (!query && category === "All") {
+    wrap.innerHTML = `<div class="empty">Full SOR code book loaded: ${totalLoaded.toLocaleString()} codes. Search above for things like <strong>brick seal</strong>, <strong>remove wc</strong>, <strong>thermal board</strong>, <strong>boxing</strong>, or <strong>concrete dpc</strong>.</div>`;
     return;
   }
-  wrap.innerHTML = items.map(item => `<article class="code-card">
+
+  if (!filtered.length) {
+    wrap.innerHTML = `<div class="empty">No code found. Try fewer words, for example "cill" instead of "door cill repair", because the SOR was apparently written by a committee allergic to normal speech.</div>`;
+    return;
+  }
+
+  const moreNote = filtered.length > limit
+    ? `<div class="empty">Showing first ${limit} of ${filtered.length.toLocaleString()} results. Narrow the search unless you enjoy scrolling like it's a punishment.</div>`
+    : "";
+
+  wrap.innerHTML = moreNote + visible.map(item => `<article class="code-card">
     <header><h3>${escapeHTML(item.title)}</h3><span class="pill">${escapeHTML(item.code)}</span></header>
     <p>${escapeHTML(item.description || item.internalWording || "")}</p>
-    <div class="code-meta"><span class="meta">${escapeHTML(item.category)}</span><span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span><span class="meta">Rate: ${escapeHTML(item.rate || "-")}</span></div>
+    <div class="code-meta">
+      <span class="meta">${escapeHTML(item.category || "SOR")}</span>
+      ${item.section ? `<span class="meta">${escapeHTML(item.section)}</span>` : ""}
+      ${item.trade ? `<span class="meta">Trade: ${escapeHTML(item.trade)}</span>` : ""}
+      <span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span>
+      <span class="meta">Rate: ${escapeHTML(item.rate || "-")}</span>
+      <span class="meta">${escapeHTML(item.source || "SOR")}</span>
+    </div>
     <p><strong>Works wording:</strong> ${escapeHTML(item.internalWording || "-")}</p>
   </article>`).join("");
 }
@@ -285,7 +370,7 @@ function renderBank() {
   const list = $("bankList");
   if (!list) return;
   const items = allItems();
-  $("bankCount").textContent = `${items.length} items`;
+  $("bankCount").textContent = `${items.length} report items`;
   list.innerHTML = items.map(item => `<article class="bank-card">
     <header><h3>${escapeHTML(item.title)}</h3><span class="pill">${escapeHTML(item.category)}</span></header>
     <p>${escapeHTML(item.tenantText || "No tenant wording")}</p>
