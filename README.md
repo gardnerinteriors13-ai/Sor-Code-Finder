@@ -1,32 +1,49 @@
-# SOR Code Finder & Tenant Report Builder
+# SOR Code Finder & Tenant Report Builder v2.2
 
-Version 2.1
+A static browser app for Healthy Homes / damp and mould survey work.
 
-A browser-based Healthy Homes tool for finding SOR codes and building tenant-friendly damp and mould reports.
+## What is included
 
-## What's in this version
-
-- Full SOR code book loaded from the v7.2 SOR spreadsheet
-- Searchable SOR Code Finder
-- Curated Healthy Homes report builder options
-- Tenant-friendly report output
+- Full SOR code book search
+- Tenant-friendly report builder
 - Internal SOR/action list
-- Custom wording/code bank saved locally in the browser
-- Copy, print/PDF and CSV export tools
-- Mobile-friendly static app for GitHub Pages
+- Wording bank
+- Custom wording/code entries saved locally in the browser
+- Copy report and copy action list buttons
+- Click-to-copy controls on SOR search results
+- Basic prototype password entry screen
 
-## Files
+## Prototype password
 
-- `index.html` - app layout
-- `style.css` - styling
-- `app.js` - app logic
-- `data.js` - curated report items and full SOR code book
-- `manifest.webmanifest` - install metadata
+Default password:
 
-## Deploy on GitHub Pages
+```text
+healthyhomes
+```
 
-Upload these files into the repository root. The live app should then run from:
+This is only a simple client-side gate for testing on GitHub Pages. It is useful for stopping casual access while the app is being shaped, but it is not proper security. Anyone who inspects the source code can work around it.
 
-`https://gardnerinteriors13-ai.github.io/Sor-Code-Finder/`
+To change the password, update the Base64 value in `app.js`:
 
-Do not upload the enclosing folder unless you intend to serve the app from a subfolder.
+```js
+const AUTH_PASSWORD = atob("aGVhbHRoeWhvbWVz");
+```
+
+For example, Base64 encode your new password and replace the value inside `atob(...)`. This only hides the plain text from casual viewing; it is not proper security.
+
+## GitHub Pages setup
+
+Upload these files into the repo root:
+
+- `index.html`
+- `style.css`
+- `app.js`
+- `data.js`
+- `manifest.webmanifest`
+- `README.md`
+
+Do not upload the containing folder unless you intend to serve the app from a subfolder.
+
+## Notes
+
+The app stores drafts and custom wording in the user's browser using localStorage. No tenant data is sent to a server in this version.

@@ -9,6 +9,22 @@
   <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
+  <section id="authGate" class="auth-gate" aria-label="App access">
+    <div class="auth-card">
+      <p class="eyebrow">Private prototype</p>
+      <h1>SOR Code Finder</h1>
+      <p class="subtitle">Enter the prototype password to open the app while it is still being shaped.</p>
+      <label class="password-label">Password
+        <input id="appPassword" type="password" autocomplete="current-password" placeholder="Enter password" />
+      </label>
+      <label class="remember-row"><input id="rememberUnlock" type="checkbox" checked /> Remember this device</label>
+      <button id="unlockApp" class="btn primary full">Unlock app</button>
+      <p id="authMessage" class="auth-message" role="status"></p>
+      <p class="auth-note">This is a simple front-door lock for testing, not bank-grade security. Anyone with the source code can still inspect the password, because static websites are painfully honest.</p>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
   <header class="hero">
     <div>
       <p class="eyebrow">Healthy Homes</p>
@@ -179,6 +195,8 @@
       </span>
     </label>
   </template>
+
+  </div>
 
   <script src="data.js"></script>
   <script src="app.js"></script>

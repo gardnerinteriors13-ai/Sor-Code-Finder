@@ -1,5 +1,10 @@
 const STORAGE_KEY = "sorTenantReportDraft.v2";
 const CUSTOM_KEY = "sorTenantReportCustomBank.v2";
+const AUTH_KEY = "sorCodeFinderUnlocked.v2.2";
+// Prototype password is: healthyhomes
+// This is a client-side gate for testing, not real security.
+const AUTH_PASSWORD = atob("aGVhbHRoeWhvbWVz");
+let appInitialised = false;
 
 const baseItems = window.SOR_APP_DATA || [];
 const codeBook = window.SOR_CODE_BOOK || [];
@@ -26,6 +31,51 @@ function loadJSON(key, fallback) {
 
 function saveJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function unlockScreen() {
+  const gate = $("authGate");
+  const shell = $("appShell");
+  if (gate) gate.hidden = true;
+  if (shell) shell.hidden = false;
+  if (!appInitialised) initApp();
+}
+
+function lockScreen(message = "") {
+  const gate = $("authGate");
+  const shell = $("appShell");
+  if (gate) gate.hidden = false;
+  if (shell) shell.hidden = true;
+  if ($("authMessage")) $("authMessage").textContent = message;
+  setTimeout(() => $("appPassword")?.focus(), 0);
+}
+
+function tryUnlock() {
+  const password = $("appPassword")?.value || "";
+  const message = $("authMessage");
+  if (!password.trim()) {
+    if (message) message.textContent = "Password needed.";
+    return;
+  }
+
+  if (password.trim() === AUTH_PASSWORD) {
+    if ($("rememberUnlock")?.checked) localStorage.setItem(AUTH_KEY, "true");
+    unlockScreen();
+    return;
+  }
+
+  if (message) message.textContent = "Wrong password.";
+  if ($("appPassword")) $("appPassword").value = "";
+}
+
+function wireAuth() {
+  $("unlockApp")?.addEventListener("click", tryUnlock);
+  $("appPassword")?.addEventListener("keydown", event => {
+    if (event.key === "Enter") tryUnlock();
+  });
+
+  if (localStorage.getItem(AUTH_KEY) === "true") unlockScreen();
+  else lockScreen();
 }
 
 function escapeHTML(value = "") {
@@ -255,8 +305,35 @@ function csvText() {
 }
 
 async function copyText(text, status = "Copied") {
-  await navigator.clipboard.writeText(text);
-  toast(status);
+  const value = String(text || "").trim();
+  if (!value) {
+    toast("Nothing to copy");
+    return;
+  }
+
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+    } else {
+      fallbackCopy(value);
+    }
+    toast(status);
+  } catch (error) {
+    fallbackCopy(value);
+    toast(status);
+  }
+}
+
+function fallbackCopy(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
 }
 
 function downloadFile(filename, content, type = "text/plain") {
@@ -315,6 +392,20 @@ function setToday() {
   if (!$("surveyDate").value) $("surveyDate").value = new Date().toISOString().slice(0, 10);
 }
 
+function codeLine(item) {
+  return `${item.code || "-"} - ${item.title || item.description || "SOR item"}`;
+}
+
+function codeFullCopy(item) {
+  return [
+    `Code: ${item.code || "-"}`,
+    `Description: ${item.description || item.title || "-"}`,
+    `UOM: ${item.uom || "-"}`,
+    `Rate: ${item.rate || "-"}`,
+    `Works wording: ${item.internalWording || "-"}`
+  ].join("\n");
+}
+
 function renderCodeResults() {
   const query = normalise($("codeSearch")?.value || "");
   const category = currentCodeCategory;
@@ -352,7 +443,17 @@ function renderCodeResults() {
     : "";
 
   wrap.innerHTML = moreNote + visible.map(item => `<article class="code-card">
-    <header><h3>${escapeHTML(item.title)}</h3><span class="pill">${escapeHTML(item.code)}</span></header>
+    <header>
+      <div>
+        <h3>${escapeHTML(item.title)}</h3>
+        <button class="code-pill" type="button" data-copy="${escapeHTML(item.code || "")}" data-status="Code copied">${escapeHTML(item.code || "-")}</button>
+      </div>
+      <div class="card-copy-actions">
+        <button class="mini-btn" type="button" data-copy="${escapeHTML(codeLine(item))}" data-status="Code line copied">Copy code</button>
+        <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || item.description || item.title || "")}" data-status="Works wording copied">Copy wording</button>
+        <button class="mini-btn" type="button" data-copy="${escapeHTML(codeFullCopy(item))}" data-status="Full item copied">Copy full</button>
+      </div>
+    </header>
     <p>${escapeHTML(item.description || item.internalWording || "")}</p>
     <div class="code-meta">
       <span class="meta">${escapeHTML(item.category || "SOR")}</span>
@@ -364,6 +465,20 @@ function renderCodeResults() {
     </div>
     <p><strong>Works wording:</strong> ${escapeHTML(item.internalWording || "-")}</p>
   </article>`).join("");
+
+  wireCopyButtons(wrap);
+}
+
+function wireCopyButtons(scope = document) {
+  scope.querySelectorAll("[data-copy]").forEach(button => {
+    if (button.dataset.copyWired === "true") return;
+    button.dataset.copyWired = "true";
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      copyText(button.dataset.copy || "", button.dataset.status || "Copied");
+    });
+  });
 }
 
 function renderBank() {
@@ -372,10 +487,21 @@ function renderBank() {
   const items = allItems();
   $("bankCount").textContent = `${items.length} report items`;
   list.innerHTML = items.map(item => `<article class="bank-card">
-    <header><h3>${escapeHTML(item.title)}</h3><span class="pill">${escapeHTML(item.category)}</span></header>
-    <p>${escapeHTML(item.tenantText || "No tenant wording")}</p>
+    <header>
+      <div>
+        <h3>${escapeHTML(item.title)}</h3>
+        <p>${escapeHTML(item.tenantText || "No tenant wording")}</p>
+      </div>
+      <span class="pill">${escapeHTML(item.category)}</span>
+    </header>
     <div class="code-meta"><span class="meta">Code: ${escapeHTML(item.code || "-")}</span><span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span><span class="meta">Rate: ${escapeHTML(item.rate || "-")}</span></div>
+    <div class="card-copy-actions">
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || item.title || "")}" data-status="Tenant wording copied">Copy tenant wording</button>
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || item.description || item.title || "")}" data-status="Internal wording copied">Copy internal wording</button>
+      ${item.code ? `<button class="mini-btn" type="button" data-copy="${escapeHTML(item.code)}" data-status="Code copied">Copy code</button>` : ""}
+    </div>
   </article>`).join("");
+  wireCopyButtons(list);
 }
 
 function addCustomItem() {
@@ -437,7 +563,9 @@ function wireEvents() {
   $("resetCustomBank").addEventListener("click", resetCustomBank);
 }
 
-function init() {
+function initApp() {
+  if (appInitialised) return;
+  appInitialised = true;
   wireEvents();
   setToday();
   loadDraft();
@@ -445,4 +573,4 @@ function init() {
   renderOptions();
 }
 
-init();
+wireAuth();
