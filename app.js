@@ -101,12 +101,18 @@ function wireAuth() {
 }
 
 function escapeHTML(value = "") {
+  // Built with char codes so entity strings survive transport
+  const amp = "&" + "amp;";
+  const lt = "&" + "lt;";
+  const gt = "&" + "gt;";
+  const quot = "&" + "quot;";
+  const apos = "&#39;";
   return String(value)
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/'/g, "&#39;")
-    .replace(/"/g, """);
+    .replace(/&/g, amp)
+    .replace(/</g, lt)
+    .replace(/>/g, gt)
+    .replace(/'/g, apos)
+    .replace(/"/g, quot);
 }
 
 function normalise(value = "") {
