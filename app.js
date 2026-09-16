@@ -101,9 +101,12 @@ function wireAuth() {
 }
 
 function escapeHTML(value = "") {
-  return String(value).replace(/[&<>'"]/g, char => ({
-    "&": "&", "<": "<", ">": ">", "'": "&#39;", '"': """
-  }[char]));
+  return String(value)
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/'/g, "&#39;")
+    .replace(/"/g, """);
 }
 
 function normalise(value = "") {
