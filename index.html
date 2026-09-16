@@ -1,1 +1,209 @@
-PLACEHOLDER
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#10251f" />
+  <title>SOR Code Finder & Tenant Report Builder v2.3</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <section id="authGate" class="auth-gate" aria-label="App access">
+    <div class="auth-card">
+      <p class="eyebrow">Private prototype</p>
+      <h1>SOR Code Finder</h1>
+      <p class="subtitle">Enter the prototype password to open the app while it is still being shaped.</p>
+      <label class="password-label">Password
+        <input id="appPassword" type="password" autocomplete="current-password" placeholder="Enter password" />
+      </label>
+      <label class="remember-row"><input id="rememberUnlock" type="checkbox" checked /> Remember this device</label>
+      <button id="unlockApp" class="btn primary full">Unlock app</button>
+      <p id="authMessage" class="auth-message" role="status"></p>
+      <p class="auth-note">This is a simple front-door lock for testing, not bank-grade security. Anyone with the source code can still inspect the password, because static websites are painfully honest.</p>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell" hidden>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Healthy Homes</p>
+      <h1>SOR Code Finder & Tenant Report Builder</h1>
+      <p class="subtitle">Find codes, click survey findings, and produce a tenant-friendly damp and mould report without turning your notes into bureaucratic soup.</p>
+    </div>
+    <div class="hero-actions">
+      <button id="themeToggle" class="btn ghost" type="button" title="Toggle dark / light mode">Dark mode</button>
+      <button id="saveDraft" class="btn secondary">Save draft</button>
+      <button id="clearDraft" class="btn ghost">Clear</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="App sections">
+    <button class="tab active" data-view="builder">Report Builder</button>
+    <button class="tab" data-view="codes">SOR Finder</button>
+    <button class="tab" data-view="bank">Wording Bank</button>
+  </nav>
+
+  <main>
+    <section id="builder" class="view active">
+      <div class="grid two">
+        <section class="card">
+          <div class="card-head">
+            <h2>Survey details</h2>
+            <span id="saveStatus" class="pill muted-pill">Not saved</span>
+          </div>
+          <div class="form-grid">
+            <label>Address<input id="propertyAddress" placeholder="e.g. 12 Sample Road, N11" /></label>
+            <label>Tenant name<input id="tenantName" placeholder="Optional" /></label>
+            <label>Survey date<input id="surveyDate" type="date" /></label>
+            <label>Surveyor<input id="surveyor" placeholder="Aaron Gardner" /></label>
+            <label>Rooms inspected<input id="roomsInspected" placeholder="Bedroom, bathroom, kitchen..." /></label>
+            <label>Urgency
+              <select id="urgency">
+                <option>Routine</option>
+                <option>Urgent</option>
+                <option>Emergency</option>
+              </select>
+            </label>
+            <label>Awaab / HH category
+              <select id="hhCategory">
+                <option>Not assigned</option>
+                <option>HH2 - Urgent</option>
+                <option>HH3 - Emergency</option>
+                <option>HH4 - Routine</option>
+              </select>
+            </label>
+            <label>Photos taken
+              <select id="photosTaken">
+                <option>Yes</option>
+                <option>No</option>
+                <option>Partial</option>
+              </select>
+            </label>
+          </div>
+          <label>Important notes / vulnerabilities / access limitations
+            <textarea id="surveyNotes" rows="4" placeholder="e.g. Young children in property, access limited behind wardrobe, tenant reports issue worsens in winter..."></textarea>
+          </label>
+          <div class="switches">
+            <label><input id="includeTenantAdvice" type="checkbox" checked /> Include helpful tenant notes</label>
+            <label><input id="includeNextSteps" type="checkbox" checked /> Include next steps</label>
+            <label><input id="includeInternalCodes" type="checkbox" checked /> Include SOR codes in action list</label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Click findings and works</h2>
+              <p class="hint">Search, filter, then tick what applies.</p>
+            </div>
+            <div class="selected-actions">
+              <span id="selectedCount" class="pill">0 selected</span>
+              <button id="clearSelection" class="btn ghost small" type="button" title="Clear all selected findings">Clear selection</button>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input id="optionSearch" type="search" placeholder="Search thermal, WC, concrete, mould, fan... (press / to focus)" />
+            <select id="categoryFilter"></select>
+          </div>
+          <div id="categoryChips" class="chips"></div>
+          <div id="optionList" class="option-list"></div>
+        </section>
+      </div>
+
+      <div class="grid two output-grid">
+        <section class="card">
+          <div class="card-head">
+            <h2>Generated tenant report</h2>
+            <div class="actions">
+              <button id="copyReport" class="btn primary">Copy</button>
+              <button id="downloadReport" class="btn secondary">Download .txt</button>
+              <button id="printReport" class="btn secondary">Print / PDF</button>
+            </div>
+          </div>
+          <article id="reportPreview" class="report"></article>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Internal SOR / action list</h2>
+            <div class="actions">
+              <button id="copyActions" class="btn secondary">Copy</button>
+              <button id="downloadCsv" class="btn secondary">CSV</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="actionsTable">
+              <thead><tr><th>Code</th><th>Description</th><th>UOM</th><th>Rate</th><th>Internal wording</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section id="codes" class="view">
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <h2>SOR Code Finder</h2>
+            <p class="hint">Search the full SOR code book plus common Healthy Homes actions.</p>
+          </div>
+          <span id="codeCount" class="pill"></span>
+        </div>
+        <div class="toolbar">
+          <input id="codeSearch" type="search" placeholder="Try brick seal, door cill, remove WC, boxing, concrete DPC, thermal board..." />
+          <select id="codeCategoryFilter"></select>
+        </div>
+        <div id="codeResults" class="code-results"></div>
+      </section>
+    </section>
+
+    <section id="bank" class="view">
+      <div class="grid two">
+        <section class="card">
+          <div class="card-head">
+            <h2>Add custom wording / code</h2>
+            <button id="resetCustomBank" class="btn ghost">Reset custom</button>
+          </div>
+          <div class="form-grid">
+            <label>Title<input id="customTitle" placeholder="e.g. Renew bathroom fan" /></label>
+            <label>Category<input id="customCategory" placeholder="Recommended works" /></label>
+            <label>Code<input id="customCode" placeholder="Optional" /></label>
+            <label>UOM<input id="customUom" placeholder="NO, SM, LM..." /></label>
+            <label>Rate<input id="customRate" placeholder="Optional" /></label>
+            <label>Description<input id="customDescription" placeholder="Internal SOR description" /></label>
+          </div>
+          <label>Tenant wording<textarea id="customTenant" rows="4" placeholder="Plain-English wording for the tenant report"></textarea></label>
+          <label>Internal wording<textarea id="customInternal" rows="3" placeholder="Works wording / surveyor notes"></textarea></label>
+          <button id="addCustomItem" class="btn primary full">Add to bank</button>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Loaded wording bank</h2>
+            <span id="bankCount" class="pill"></span>
+          </div>
+          <div id="bankList" class="bank-list"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <template id="optionTemplate">
+    <label class="option-card">
+      <input type="checkbox" />
+      <span>
+        <strong></strong>
+        <small></small>
+      </span>
+    </label>
+  </template>
+
+  </div>
+
+  <p class="app-version" id="appVersion">v2.3 · Improved search, auto-save, dark mode</p>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
