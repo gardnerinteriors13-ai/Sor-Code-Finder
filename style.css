@@ -280,3 +280,108 @@ td:first-child { font-weight: 900; color: var(--brand-2); }
 }
 
 [hidden] { display: none !important; }
+
+/* === v2.3 improvements === */
+.selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn.small {
+  padding: 6px 11px;
+  font-size: .82rem;
+}
+.app-version {
+  text-align: center;
+  color: var(--muted);
+  font-size: .8rem;
+  padding: 8px 16px 24px;
+  margin: 0;
+}
+
+/* Dark mode */
+html[data-theme="dark"] {
+  --bg: #0f1a16;
+  --panel: #16231e;
+  --panel-2: #1a2a24;
+  --text: #e6efe9;
+  --muted: #9bb5a8;
+  --brand: #0d1f19;
+  --brand-2: #3d9b78;
+  --accent: #e0b36a;
+  --danger: #e07a6e;
+  --border: #2a3d34;
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] body {
+  background: radial-gradient(circle at top left, #152820, var(--bg) 40%, #0c1411 100%);
+}
+html[data-theme="dark"] .hero {
+  background: linear-gradient(135deg, #0a1612, #143029);
+}
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .option-card,
+html[data-theme="dark"] .code-card,
+html[data-theme="dark"] .bank-card,
+html[data-theme="dark"] .report,
+html[data-theme="dark"] table {
+  background: var(--panel);
+}
+html[data-theme="dark"] .option-card.checked {
+  background: #1e3a2f;
+  border-color: #3d9b78;
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #0f1a16;
+  color: var(--text);
+  border-color: var(--border);
+}
+html[data-theme="dark"] .tab {
+  background: rgba(22, 35, 30, 0.8);
+  color: var(--muted);
+}
+html[data-theme="dark"] .tab.active {
+  background: var(--brand-2);
+  color: #fff;
+  border-color: var(--brand-2);
+}
+html[data-theme="dark"] .btn.secondary {
+  background: #24362e;
+  color: #cfe6d9;
+}
+html[data-theme="dark"] .pill {
+  background: #1e3a2f;
+  color: #8fd4b3;
+}
+html[data-theme="dark"] .meta {
+  background: #1e3a2f;
+  color: #9bb5a8;
+}
+html[data-theme="dark"] th {
+  background: #1a2a24;
+}
+html[data-theme="dark"] .auth-card {
+  background: linear-gradient(180deg, #16231e, #12201b);
+}
+html[data-theme="dark"] .mini-btn,
+html[data-theme="dark"] .code-pill {
+  background: #1e3a2f;
+  color: #cfe6d9;
+  border-color: var(--border);
+}
+html[data-theme="dark"] .empty {
+  border-color: var(--border);
+}
+
+/* Focus visibility */
+:focus-visible {
+  outline: 3px solid var(--brand-2);
+  outline-offset: 2px;
+}
+
+@media print {
+  .app-version, #themeToggle, #clearSelection, .hero-actions { display: none !important; }
+}
