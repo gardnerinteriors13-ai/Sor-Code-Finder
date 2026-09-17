@@ -1,10 +1,12 @@
 const STORAGE_KEY = "sorTenantReportDraft.v2";
 const CUSTOM_KEY = "sorTenantReportCustomBank.v2";
-const AUTH_KEY = "sorCodeFinderUnlocked.v2.2";
+const AUTH_KEY = "sorCodeFinderUnlocked.v2.3";
+const THEME_KEY = "sorCodeFinderTheme.v2.3";
 // Prototype password is: healthyhomes
 // This is a client-side gate for testing, not real security.
 const AUTH_PASSWORD = atob("aGVhbHRoeWhvbWVz");
 let appInitialised = false;
+let autoSaveTimer = null;
 
 const baseItems = window.SOR_APP_DATA || [];
 const codeBook = window.SOR_CODE_BOOK || [];
@@ -12,6 +14,26 @@ let customItems = loadJSON(CUSTOM_KEY, []);
 let selectedIds = new Set();
 let currentCategory = "All";
 let currentCodeCategory = "All";
+
+// Common synonyms to improve search for damp/mould / Healthy Homes work
+const SEARCH_SYNONYMS = {
+  mould: ["mold", "mildew", "fungus"],
+  mold: ["mould", "mildew"],
+  condensation: ["condense", "moisture", "damp"],
+  damp: ["moisture", "wet", "condensation"],
+  fan: ["extractor", "vent", "ventilation"],
+  extractor: ["fan", "vent"],
+  ventilation: ["fan", "extractor", "vent", "airflow"],
+  thermal: ["insulation", "board", "warm"],
+  cill: ["sill", "window sill"],
+  sill: ["cill"],
+  dpc: ["damp proof course", "damp-proof"],
+  wc: ["toilet", "loo", "lavatory"],
+  toilet: ["wc", "loo"],
+  boxing: ["box", "pipe box", "pipework"],
+  seal: ["sealant", "silicone", "point"],
+  brick: ["masonry", "pointing"]
+};
 
 const $ = (id) => document.getElementById(id);
 const fields = [
@@ -79,9 +101,18 @@ function wireAuth() {
 }
 
 function escapeHTML(value = "") {
-  return String(value).replace(/[&<>'"]/g, char => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
-  }[char]));
+  // Built with char codes so entity strings survive transport
+  const amp = "&" + "amp;";
+  const lt = "&" + "lt;";
+  const gt = "&" + "gt;";
+  const quot = "&" + "quot;";
+  const apos = "&#39;";
+  return String(value)
+    .replace(/&/g, amp)
+    .replace(/</g, lt)
+    .replace(/>/g, gt)
+    .replace(/'/g, apos)
+    .replace(/"/g, quot);
 }
 
 function normalise(value = "") {
@@ -99,7 +130,7 @@ function tokenMatches(haystack, word) {
 
 function itemMatches(item, query) {
   if (!query) return true;
-  const words = normalise(query).split(/\s+/).filter(Boolean);
+  const originalWords = normalise(query).split(/\s+/).filter(Boolean);
   const haystack = normalise([
     item.title,
     item.category,
@@ -112,7 +143,10 @@ function itemMatches(item, query) {
     item.tenantText,
     ...(item.tags || [])
   ].join(" "));
-  return words.every(word => tokenMatches(haystack, word));
+  return originalWords.every(word => {
+    const candidates = [word, ...(SEARCH_SYNONYMS[word] || [])];
+    return candidates.some(c => tokenMatches(haystack, c));
+  });
 }
 
 function allCodeItems() {
@@ -194,6 +228,7 @@ function renderOptions() {
     if (input.checked) selectedIds.add(input.dataset.id);
     else selectedIds.delete(input.dataset.id);
     renderOptions();
+    scheduleAutoSave();
   }));
   updateOutputs();
 }
@@ -356,9 +391,49 @@ function toast(message) {
   }, 1400);
 }
 
-function saveDraft() {
+function saveDraft(silent = false) {
   saveJSON(STORAGE_KEY, { survey: getSurvey(), selectedIds: [...selectedIds] });
-  toast("Draft saved");
+  if (!silent) toast("Draft saved");
+  else {
+    const status = $("saveStatus");
+    if (status) {
+      status.textContent = "Auto-saved";
+      status.classList.remove("muted-pill");
+      setTimeout(() => {
+        status.textContent = "Saved locally";
+        status.classList.add("muted-pill");
+      }, 1200);
+    }
+  }
+}
+
+function scheduleAutoSave() {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => saveDraft(true), 900);
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  renderOptions();
+  toast("Selection cleared");
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  localStorage.setItem(THEME_KEY, theme);
+  const btn = $("themeToggle");
+  if (btn) btn.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+}
+
+function toggleTheme() {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(saved || (prefersDark ? "dark" : "light"));
 }
 
 function loadDraft() {
@@ -496,9 +571,8 @@ function renderBank() {
     </header>
     <div class="code-meta"><span class="meta">Code: ${escapeHTML(item.code || "-")}</span><span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span><span class="meta">Rate: ${escapeHTML(item.rate || "-")}</span></div>
     <div class="card-copy-actions">
-      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || item.title || "")}" data-status="Tenant wording copied">Copy tenant wording</button>
-      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || item.description || item.title || "")}" data-status="Internal wording copied">Copy internal wording</button>
-      ${item.code ? `<button class="mini-btn" type="button" data-copy="${escapeHTML(item.code)}" data-status="Code copied">Copy code</button>` : ""}
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || "")}" data-status="Tenant wording copied">Copy tenant</button>
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || "")}" data-status="Internal wording copied">Copy internal</button>
     </div>
   </article>`).join("");
   wireCopyButtons(list);
@@ -506,9 +580,12 @@ function renderBank() {
 
 function addCustomItem() {
   const title = $("customTitle").value.trim();
-  if (!title) { toast("Title needed"); return; }
+  if (!title) {
+    toast("Title required");
+    return;
+  }
   const item = {
-    id: `custom-${Date.now()}`,
+    id: "custom-" + Date.now(),
     title,
     category: $("customCategory").value.trim() || "Custom",
     code: $("customCode").value.trim(),
@@ -545,27 +622,42 @@ function wireEvents() {
     renderBank();
   }));
 
-  fields.forEach(id => $(id)?.addEventListener("input", updateOutputs));
-  fields.forEach(id => $(id)?.addEventListener("change", updateOutputs));
-  $("optionSearch").addEventListener("input", renderOptions);
-  $("categoryFilter").addEventListener("change", (e) => { currentCategory = e.target.value; renderOptions(); });
-  $("codeSearch").addEventListener("input", renderCodeResults);
-  $("codeCategoryFilter").addEventListener("change", (e) => { currentCodeCategory = e.target.value; renderCodeResults(); });
+  fields.forEach(id => {
+    $(id)?.addEventListener("input", () => { updateOutputs(); scheduleAutoSave(); });
+    $(id)?.addEventListener("change", () => { updateOutputs(); scheduleAutoSave(); });
+  });
+  $("optionSearch")?.addEventListener("input", renderOptions);
+  $("categoryFilter")?.addEventListener("change", (e) => { currentCategory = e.target.value; renderOptions(); });
+  $("codeSearch")?.addEventListener("input", renderCodeResults);
+  $("codeCategoryFilter")?.addEventListener("change", (e) => { currentCodeCategory = e.target.value; renderCodeResults(); });
 
-  $("copyReport").addEventListener("click", () => copyText(reportPlainText(), "Report copied"));
-  $("downloadReport").addEventListener("click", () => downloadFile("tenant-report.txt", reportPlainText()));
-  $("printReport").addEventListener("click", () => window.print());
-  $("copyActions").addEventListener("click", () => copyText(actionText(), "Actions copied"));
-  $("downloadCsv").addEventListener("click", () => downloadFile("sor-actions.csv", csvText(), "text/csv"));
-  $("saveDraft").addEventListener("click", saveDraft);
-  $("clearDraft").addEventListener("click", clearDraft);
-  $("addCustomItem").addEventListener("click", addCustomItem);
-  $("resetCustomBank").addEventListener("click", resetCustomBank);
+  $("copyReport")?.addEventListener("click", () => copyText(reportPlainText(), "Report copied"));
+  $("downloadReport")?.addEventListener("click", () => downloadFile("tenant-report.txt", reportPlainText()));
+  $("printReport")?.addEventListener("click", () => window.print());
+  $("copyActions")?.addEventListener("click", () => copyText(actionText(), "Actions copied"));
+  $("downloadCsv")?.addEventListener("click", () => downloadFile("sor-actions.csv", csvText(), "text/csv"));
+  $("saveDraft")?.addEventListener("click", () => saveDraft(false));
+  $("clearDraft")?.addEventListener("click", clearDraft);
+  $("clearSelection")?.addEventListener("click", clearSelection);
+  $("themeToggle")?.addEventListener("click", toggleTheme);
+  $("addCustomItem")?.addEventListener("click", addCustomItem);
+  $("resetCustomBank")?.addEventListener("click", resetCustomBank);
+
+  // Keyboard: press / to focus the active search box
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+      e.preventDefault();
+      const activeView = document.querySelector(".view.active");
+      const search = activeView?.querySelector('input[type="search"]') || $("optionSearch") || $("codeSearch");
+      search?.focus();
+    }
+  });
 }
 
 function initApp() {
   if (appInitialised) return;
   appInitialised = true;
+  initTheme();
   wireEvents();
   setToday();
   loadDraft();

@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#10251f" />
-  <title>SOR Code Finder & Tenant Report Builder</title>
+  <meta name="theme-color" content="#0a0f0d" />
+  <title>SOR Code Finder & Tenant Report Builder v2.3</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.webmanifest" />
 </head>
@@ -32,6 +32,7 @@
       <p class="subtitle">Find codes, click survey findings, and produce a tenant-friendly damp and mould report without turning your notes into bureaucratic soup.</p>
     </div>
     <div class="hero-actions">
+      <button id="themeToggle" class="btn ghost" type="button" title="Toggle dark / light mode">Light mode</button>
       <button id="saveDraft" class="btn secondary">Save draft</button>
       <button id="clearDraft" class="btn ghost">Clear</button>
     </div>
@@ -96,10 +97,13 @@
               <h2>Click findings and works</h2>
               <p class="hint">Search, filter, then tick what applies.</p>
             </div>
-            <span id="selectedCount" class="pill">0 selected</span>
+            <div class="selected-actions">
+              <span id="selectedCount" class="pill">0 selected</span>
+              <button id="clearSelection" class="btn ghost small" type="button" title="Clear all selected findings">Clear selection</button>
+            </div>
           </div>
           <div class="toolbar">
-            <input id="optionSearch" type="search" placeholder="Search thermal, WC, concrete, mould, fan..." />
+            <input id="optionSearch" type="search" placeholder="Search thermal, WC, concrete, mould, fan... (press / to focus)" />
             <select id="categoryFilter"></select>
           </div>
           <div id="categoryChips" class="chips"></div>
@@ -143,7 +147,7 @@
         <div class="card-head">
           <div>
             <h2>SOR Code Finder</h2>
-            <p class="hint">Search the full SOR code book plus common Healthy Homes actions.</p>
+            <p class="hint">Search the full SOR code book plus common Healthy Homes actions. Star codes to pin favourites.</p>
           </div>
           <span id="codeCount" class="pill"></span>
         </div>
@@ -151,6 +155,7 @@
           <input id="codeSearch" type="search" placeholder="Try brick seal, door cill, remove WC, boxing, concrete DPC, thermal board..." />
           <select id="codeCategoryFilter"></select>
         </div>
+        <div id="codePinned" class="code-pinned"></div>
         <div id="codeResults" class="code-results"></div>
       </section>
     </section>
@@ -198,6 +203,7 @@
 
   </div>
 
+  <p class="app-version" id="appVersion">v2.3 · Favourites · dark moody · auto-save</p>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

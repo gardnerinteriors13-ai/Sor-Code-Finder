@@ -1,6 +1,17 @@
-# SOR Code Finder & Tenant Report Builder v2.2
+# SOR Code Finder & Tenant Report Builder v2.3
 
 A static browser app for Healthy Homes / damp and mould survey work.
+
+## Changelog
+
+### v2.3
+- **Dark mode** – toggle in the header (respects system preference, remembered)
+- **Auto-save** – drafts save automatically ~1s after changes
+- **Smarter search** – synonym expansion (mould/mold, fan/extractor, WC/toilet, cill/sill, DPC, etc.)
+- **Clear selection** button for findings
+- Keyboard shortcut: press `/` to focus the current search box
+- Accessibility: improved focus styles
+- Version badge and small UX polish
 
 ## What is included
 
