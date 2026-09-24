@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0a0f0d" />
-  <title>SOR Code Finder & Tenant Report Builder v2.3</title>
+  <meta name="theme-color" content="#10251f" />
+  <title>SOR Code Finder & Tenant Report Builder</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="manifest" href="manifest.webmanifest" />
 </head>
@@ -32,20 +32,82 @@
       <p class="subtitle">Find codes, click survey findings, and produce a tenant-friendly damp and mould report without turning your notes into bureaucratic soup.</p>
     </div>
     <div class="hero-actions">
-      <button id="themeToggle" class="btn ghost" type="button" title="Toggle dark / light mode">Light mode</button>
       <button id="saveDraft" class="btn secondary">Save draft</button>
       <button id="clearDraft" class="btn ghost">Clear</button>
     </div>
   </header>
 
   <nav class="tabs" aria-label="App sections">
-    <button class="tab active" data-view="builder">Report Builder</button>
+    <button class="tab active" data-view="visual">Visual Builder</button>
+    <button class="tab" data-view="builder">Report Builder</button>
     <button class="tab" data-view="codes">SOR Finder</button>
     <button class="tab" data-view="bank">Wording Bank</button>
   </nav>
 
   <main>
-    <section id="builder" class="view active">
+    <section id="visual" class="view active">
+      <div class="grid visual-grid">
+        <section class="card visual-control-card">
+          <div class="card-head">
+            <div>
+              <h2>Visual Survey Builder</h2>
+              <p class="hint">Choose the damp and mould route, pick a room, then tap what you can actually see. The app suggests wording and SOR bundles from the symptom. Scandalously useful.</p>
+            </div>
+            <span class="pill">Prototype</span>
+          </div>
+
+          <div class="visual-step">
+            <h3>1. Choose section</h3>
+            <div id="visualCategoryList" class="visual-pick-list"></div>
+          </div>
+
+          <div class="visual-step">
+            <h3>2. Choose room / area</h3>
+            <div id="visualRoomList" class="visual-pick-list"></div>
+          </div>
+
+          <div class="visual-step">
+            <h3>3. Tap the problem</h3>
+            <p class="hint">Tap a mould patch, vent, damp stained wall, window reveal, lower wall or external defect. Then choose the closest symptom.</p>
+          </div>
+        </section>
+
+        <section class="card visual-stage-card">
+          <div class="card-head">
+            <div>
+              <h2 id="visualRoomTitle">Room visual</h2>
+              <p id="visualRoomHint" class="hint"></p>
+            </div>
+            <button id="resetVisualSelection" class="btn ghost">Reset visual</button>
+          </div>
+          <div id="visualDiagram" class="visual-stage"></div>
+        </section>
+      </div>
+
+      <div class="grid two visual-output-grid">
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Issue details</h2>
+              <p class="hint">Choose the visible symptom. This controls the bundle, not guesswork dressed as wizardry.</p>
+            </div>
+          </div>
+          <div id="visualIssuePanel" class="visual-panel empty-panel">Tap a hotspot on the room visual to start.</div>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>Suggested bundle</h2>
+              <p class="hint">Add the suggested findings, causes and works to the report builder/action list.</p>
+            </div>
+          </div>
+          <div id="visualBundlePanel" class="visual-panel empty-panel">No bundle selected yet.</div>
+        </section>
+      </div>
+    </section>
+
+    <section id="builder" class="view">
       <div class="grid two">
         <section class="card">
           <div class="card-head">
@@ -97,13 +159,10 @@
               <h2>Click findings and works</h2>
               <p class="hint">Search, filter, then tick what applies.</p>
             </div>
-            <div class="selected-actions">
-              <span id="selectedCount" class="pill">0 selected</span>
-              <button id="clearSelection" class="btn ghost small" type="button" title="Clear all selected findings">Clear selection</button>
-            </div>
+            <span id="selectedCount" class="pill">0 selected</span>
           </div>
           <div class="toolbar">
-            <input id="optionSearch" type="search" placeholder="Search thermal, WC, concrete, mould, fan... (press / to focus)" />
+            <input id="optionSearch" type="search" placeholder="Search thermal, WC, concrete, mould, fan..." />
             <select id="categoryFilter"></select>
           </div>
           <div id="categoryChips" class="chips"></div>
@@ -147,7 +206,7 @@
         <div class="card-head">
           <div>
             <h2>SOR Code Finder</h2>
-            <p class="hint">Search the full SOR code book plus common Healthy Homes actions. Star codes to pin favourites.</p>
+            <p class="hint">Search the full SOR code book plus common Healthy Homes actions.</p>
           </div>
           <span id="codeCount" class="pill"></span>
         </div>
@@ -155,7 +214,6 @@
           <input id="codeSearch" type="search" placeholder="Try brick seal, door cill, remove WC, boxing, concrete DPC, thermal board..." />
           <select id="codeCategoryFilter"></select>
         </div>
-        <div id="codePinned" class="code-pinned"></div>
         <div id="codeResults" class="code-results"></div>
       </section>
     </section>
@@ -203,7 +261,6 @@
 
   </div>
 
-  <p class="app-version" id="appVersion">v2.3 · Favourites · dark moody · auto-save</p>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

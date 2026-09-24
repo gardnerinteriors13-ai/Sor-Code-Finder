@@ -1,39 +1,22 @@
 const STORAGE_KEY = "sorTenantReportDraft.v2";
 const CUSTOM_KEY = "sorTenantReportCustomBank.v2";
-const AUTH_KEY = "sorCodeFinderUnlocked.v2.3";
-const THEME_KEY = "sorCodeFinderTheme.v2.3";
+const AUTH_KEY = "sorCodeFinderUnlocked.v2.2";
 // Prototype password is: healthyhomes
 // This is a client-side gate for testing, not real security.
 const AUTH_PASSWORD = atob("aGVhbHRoeWhvbWVz");
 let appInitialised = false;
-let autoSaveTimer = null;
 
 const baseItems = window.SOR_APP_DATA || [];
 const codeBook = window.SOR_CODE_BOOK || [];
+const visualSurveyData = window.VISUAL_SURVEY_DATA || { categories: [], rooms: [] };
+let currentVisualCategory = "damp-mould";
+let currentVisualRoom = "bedroom";
+let currentVisualHotspot = null;
+let currentVisualSymptom = null;
 let customItems = loadJSON(CUSTOM_KEY, []);
 let selectedIds = new Set();
 let currentCategory = "All";
 let currentCodeCategory = "All";
-
-// Common synonyms to improve search for damp/mould / Healthy Homes work
-const SEARCH_SYNONYMS = {
-  mould: ["mold", "mildew", "fungus"],
-  mold: ["mould", "mildew"],
-  condensation: ["condense", "moisture", "damp"],
-  damp: ["moisture", "wet", "condensation"],
-  fan: ["extractor", "vent", "ventilation"],
-  extractor: ["fan", "vent"],
-  ventilation: ["fan", "extractor", "vent", "airflow"],
-  thermal: ["insulation", "board", "warm"],
-  cill: ["sill", "window sill"],
-  sill: ["cill"],
-  dpc: ["damp proof course", "damp-proof"],
-  wc: ["toilet", "loo", "lavatory"],
-  toilet: ["wc", "loo"],
-  boxing: ["box", "pipe box", "pipework"],
-  seal: ["sealant", "silicone", "point"],
-  brick: ["masonry", "pointing"]
-};
 
 const $ = (id) => document.getElementById(id);
 const fields = [
@@ -101,18 +84,9 @@ function wireAuth() {
 }
 
 function escapeHTML(value = "") {
-  // Built with char codes so entity strings survive transport
-  const amp = "&" + "amp;";
-  const lt = "&" + "lt;";
-  const gt = "&" + "gt;";
-  const quot = "&" + "quot;";
-  const apos = "&#39;";
-  return String(value)
-    .replace(/&/g, amp)
-    .replace(/</g, lt)
-    .replace(/>/g, gt)
-    .replace(/'/g, apos)
-    .replace(/"/g, quot);
+  return String(value).replace(/[&<>'"]/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+  }[char]));
 }
 
 function normalise(value = "") {
@@ -130,7 +104,7 @@ function tokenMatches(haystack, word) {
 
 function itemMatches(item, query) {
   if (!query) return true;
-  const originalWords = normalise(query).split(/\s+/).filter(Boolean);
+  const words = normalise(query).split(/\s+/).filter(Boolean);
   const haystack = normalise([
     item.title,
     item.category,
@@ -143,10 +117,7 @@ function itemMatches(item, query) {
     item.tenantText,
     ...(item.tags || [])
   ].join(" "));
-  return originalWords.every(word => {
-    const candidates = [word, ...(SEARCH_SYNONYMS[word] || [])];
-    return candidates.some(c => tokenMatches(haystack, c));
-  });
+  return words.every(word => tokenMatches(haystack, word));
 }
 
 function allCodeItems() {
@@ -228,7 +199,6 @@ function renderOptions() {
     if (input.checked) selectedIds.add(input.dataset.id);
     else selectedIds.delete(input.dataset.id);
     renderOptions();
-    scheduleAutoSave();
   }));
   updateOutputs();
 }
@@ -391,49 +361,9 @@ function toast(message) {
   }, 1400);
 }
 
-function saveDraft(silent = false) {
+function saveDraft() {
   saveJSON(STORAGE_KEY, { survey: getSurvey(), selectedIds: [...selectedIds] });
-  if (!silent) toast("Draft saved");
-  else {
-    const status = $("saveStatus");
-    if (status) {
-      status.textContent = "Auto-saved";
-      status.classList.remove("muted-pill");
-      setTimeout(() => {
-        status.textContent = "Saved locally";
-        status.classList.add("muted-pill");
-      }, 1200);
-    }
-  }
-}
-
-function scheduleAutoSave() {
-  clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => saveDraft(true), 900);
-}
-
-function clearSelection() {
-  selectedIds.clear();
-  renderOptions();
-  toast("Selection cleared");
-}
-
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem(THEME_KEY, theme);
-  const btn = $("themeToggle");
-  if (btn) btn.textContent = theme === "dark" ? "Light mode" : "Dark mode";
-}
-
-function toggleTheme() {
-  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  applyTheme(next);
-}
-
-function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  applyTheme(saved || (prefersDark ? "dark" : "light"));
+  toast("Draft saved");
 }
 
 function loadDraft() {
@@ -571,8 +501,9 @@ function renderBank() {
     </header>
     <div class="code-meta"><span class="meta">Code: ${escapeHTML(item.code || "-")}</span><span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span><span class="meta">Rate: ${escapeHTML(item.rate || "-")}</span></div>
     <div class="card-copy-actions">
-      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || "")}" data-status="Tenant wording copied">Copy tenant</button>
-      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || "")}" data-status="Internal wording copied">Copy internal</button>
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || item.title || "")}" data-status="Tenant wording copied">Copy tenant wording</button>
+      <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || item.description || item.title || "")}" data-status="Internal wording copied">Copy internal wording</button>
+      ${item.code ? `<button class="mini-btn" type="button" data-copy="${escapeHTML(item.code)}" data-status="Code copied">Copy code</button>` : ""}
     </div>
   </article>`).join("");
   wireCopyButtons(list);
@@ -580,12 +511,9 @@ function renderBank() {
 
 function addCustomItem() {
   const title = $("customTitle").value.trim();
-  if (!title) {
-    toast("Title required");
-    return;
-  }
+  if (!title) { toast("Title needed"); return; }
   const item = {
-    id: "custom-" + Date.now(),
+    id: `custom-${Date.now()}`,
     title,
     category: $("customCategory").value.trim() || "Custom",
     code: $("customCode").value.trim(),
@@ -613,6 +541,220 @@ function resetCustomBank() {
   toast("Custom bank reset");
 }
 
+
+function getVisualRooms() {
+  return (visualSurveyData.rooms || []).filter(room => room.category === currentVisualCategory);
+}
+
+function getVisualRoom() {
+  return getVisualRooms().find(room => room.id === currentVisualRoom) || getVisualRooms()[0] || null;
+}
+
+function getVisualHotspot() {
+  const room = getVisualRoom();
+  if (!room) return null;
+  return (room.hotspots || []).find(hotspot => hotspot.id === currentVisualHotspot) || null;
+}
+
+function getVisualSymptom() {
+  const hotspot = getVisualHotspot();
+  if (!hotspot) return null;
+  return (hotspot.symptoms || []).find(symptom => symptom.id === currentVisualSymptom) || null;
+}
+
+function renderVisualBuilder() {
+  renderVisualCategories();
+  renderVisualRooms();
+  renderVisualDiagram();
+  renderVisualIssuePanel();
+  renderVisualBundlePanel();
+}
+
+function renderVisualCategories() {
+  const wrap = $("visualCategoryList");
+  if (!wrap) return;
+  wrap.innerHTML = (visualSurveyData.categories || []).map(category => {
+    const active = category.id === currentVisualCategory;
+    const disabled = category.enabled === false;
+    return `<button class="visual-choice ${active ? "active" : ""}" type="button" data-category="${escapeHTML(category.id)}" ${disabled ? "disabled" : ""}>
+      <strong>${escapeHTML(category.title)}</strong>
+      <small>${escapeHTML(category.subtitle || "")}${disabled ? " · parked for later" : ""}</small>
+    </button>`;
+  }).join("");
+  wrap.querySelectorAll("button[data-category]:not([disabled])").forEach(button => {
+    button.addEventListener("click", () => {
+      currentVisualCategory = button.dataset.category;
+      currentVisualRoom = getVisualRooms()[0]?.id || "";
+      currentVisualHotspot = null;
+      currentVisualSymptom = null;
+      renderVisualBuilder();
+    });
+  });
+}
+
+function renderVisualRooms() {
+  const wrap = $("visualRoomList");
+  if (!wrap) return;
+  const rooms = getVisualRooms();
+  if (!rooms.some(room => room.id === currentVisualRoom)) currentVisualRoom = rooms[0]?.id || "";
+  wrap.innerHTML = rooms.map(room => `<button class="visual-choice compact ${room.id === currentVisualRoom ? "active" : ""}" type="button" data-room="${escapeHTML(room.id)}">
+    <strong>${escapeHTML(room.title)}</strong>
+    <small>${escapeHTML(room.hint || "")}</small>
+  </button>`).join("");
+  wrap.querySelectorAll("button[data-room]").forEach(button => {
+    button.addEventListener("click", () => {
+      currentVisualRoom = button.dataset.room;
+      currentVisualHotspot = null;
+      currentVisualSymptom = null;
+      renderVisualBuilder();
+    });
+  });
+}
+
+function roomSvg(type) {
+  if (type === "bathroom") {
+    return `<svg class="room-svg" viewBox="0 0 100 70" aria-hidden="true">
+      <rect x="4" y="4" width="92" height="62" rx="4" class="svg-wall" />
+      <path d="M4 48 H96 V66 H4 Z" class="svg-floor" />
+      <rect x="56" y="47" width="31" height="11" rx="3" class="svg-fixture" />
+      <circle cx="24" cy="53" r="6" class="svg-fixture" />
+      <rect x="73" y="10" width="12" height="12" rx="2" class="svg-vent" />
+      <path d="M10 12 C24 6 44 8 55 13" class="svg-ceiling-line" />
+    </svg>`;
+  }
+  if (type === "kitchen") {
+    return `<svg class="room-svg" viewBox="0 0 100 70" aria-hidden="true">
+      <rect x="4" y="4" width="92" height="62" rx="4" class="svg-wall" />
+      <path d="M4 50 H96 V66 H4 Z" class="svg-floor" />
+      <rect x="14" y="18" width="22" height="16" rx="2" class="svg-window" />
+      <rect x="18" y="47" width="64" height="12" rx="2" class="svg-fixture" />
+      <rect x="43" y="42" width="14" height="7" rx="2" class="svg-sink" />
+      <rect x="72" y="15" width="10" height="10" rx="2" class="svg-vent" />
+    </svg>`;
+  }
+  if (type === "external") {
+    return `<svg class="room-svg" viewBox="0 0 100 70" aria-hidden="true">
+      <rect x="14" y="8" width="68" height="52" rx="2" class="svg-wall" />
+      <path d="M8 60 H92 V68 H8 Z" class="svg-ground" />
+      <path d="M18 60 H70 L82 68 H28 Z" class="svg-path" />
+      <rect x="24" y="22" width="15" height="14" rx="2" class="svg-window" />
+      <rect x="56" y="22" width="13" height="28" rx="2" class="svg-door" />
+      <path d="M82 8 V57" class="svg-pipe" />
+      <path d="M28 18 L36 41 M34 36 L43 48" class="svg-crack" />
+      <rect x="17" y="51" width="62" height="8" class="svg-plinth" />
+    </svg>`;
+  }
+  return `<svg class="room-svg" viewBox="0 0 100 70" aria-hidden="true">
+    <rect x="4" y="4" width="92" height="62" rx="4" class="svg-wall" />
+    <path d="M4 47 H96 V66 H4 Z" class="svg-floor" />
+    <rect x="59" y="17" width="20" height="18" rx="2" class="svg-window" />
+    <rect x="12" y="51" width="28" height="10" rx="2" class="svg-furniture" />
+    <rect x="75" y="36" width="10" height="8" rx="2" class="svg-vent" />
+    <path d="M4 47 H96" class="svg-skirting" />
+  </svg>`;
+}
+
+function renderVisualDiagram() {
+  const room = getVisualRoom();
+  const title = $("visualRoomTitle");
+  const hint = $("visualRoomHint");
+  const wrap = $("visualDiagram");
+  if (!room || !wrap) return;
+  if (title) title.textContent = room.title;
+  if (hint) hint.textContent = room.hint || "";
+  wrap.innerHTML = `${roomSvg(room.type)}${(room.hotspots || []).map(hotspot => `
+    <button class="visual-hotspot ${hotspot.id === currentVisualHotspot ? "active" : ""} kind-${escapeHTML(hotspot.kind || "issue")}" type="button" style="left:${Number(hotspot.x) || 50}%; top:${Number(hotspot.y) || 50}%;" data-hotspot="${escapeHTML(hotspot.id)}">
+      <span class="hotspot-dot"></span><span class="hotspot-label">${escapeHTML(hotspot.label)}</span>
+    </button>`).join("")}`;
+  wrap.querySelectorAll("button[data-hotspot]").forEach(button => {
+    button.addEventListener("click", () => {
+      currentVisualHotspot = button.dataset.hotspot;
+      currentVisualSymptom = null;
+      renderVisualDiagram();
+      renderVisualIssuePanel();
+      renderVisualBundlePanel();
+    });
+  });
+}
+
+function renderVisualIssuePanel() {
+  const panel = $("visualIssuePanel");
+  if (!panel) return;
+  const room = getVisualRoom();
+  const hotspot = getVisualHotspot();
+  if (!room || !hotspot) {
+    panel.className = "visual-panel empty-panel";
+    panel.innerHTML = "Tap a hotspot on the room visual to start.";
+    return;
+  }
+  panel.className = "visual-panel";
+  panel.innerHTML = `<p class="visual-context"><strong>${escapeHTML(room.title)}</strong> · ${escapeHTML(hotspot.label)}</p>
+    <h3>What best describes it?</h3>
+    <div class="symptom-list">${(hotspot.symptoms || []).map(symptom => `<button class="symptom-choice ${symptom.id === currentVisualSymptom ? "active" : ""}" type="button" data-symptom="${escapeHTML(symptom.id)}">
+      <strong>${escapeHTML(symptom.title)}</strong>
+      <small>${escapeHTML(symptom.diagnosis || "")}</small>
+    </button>`).join("")}</div>`;
+  panel.querySelectorAll("button[data-symptom]").forEach(button => {
+    button.addEventListener("click", () => {
+      currentVisualSymptom = button.dataset.symptom;
+      renderVisualIssuePanel();
+      renderVisualBundlePanel();
+    });
+  });
+}
+
+function getBundleItems(symptom) {
+  if (!symptom) return [];
+  const map = new Map(allItems().map(item => [item.id, item]));
+  return (symptom.bundle || []).map(id => map.get(id)).filter(Boolean);
+}
+
+function addBundleItems(ids) {
+  ids.forEach(id => selectedIds.add(id));
+  renderOptions();
+  updateOutputs();
+  renderVisualBundlePanel();
+  toast("Visual bundle added");
+}
+
+function renderVisualBundlePanel() {
+  const panel = $("visualBundlePanel");
+  if (!panel) return;
+  const hotspot = getVisualHotspot();
+  const symptom = getVisualSymptom();
+  if (!hotspot || !symptom) {
+    panel.className = "visual-panel empty-panel";
+    panel.innerHTML = hotspot ? "Choose a symptom to see the suggested bundle." : "No bundle selected yet.";
+    return;
+  }
+  const items = getBundleItems(symptom);
+  const ids = items.map(item => item.id);
+  panel.className = "visual-panel";
+  panel.innerHTML = `<p class="visual-context"><strong>Likely logic:</strong> ${escapeHTML(symptom.diagnosis || "")}</p>
+    <div class="bundle-actions">
+      <button class="btn primary" type="button" id="addVisualBundle">Add full bundle</button>
+      <button class="btn secondary" type="button" id="copyVisualBundle">Copy bundle</button>
+    </div>
+    <div class="bundle-list">${items.map(item => `<article class="bundle-item ${selectedIds.has(item.id) ? "selected" : ""}">
+      <div>
+        <h3>${escapeHTML(item.title)}</h3>
+        <p>${escapeHTML(item.tenantText || item.internalWording || item.description || "")}</p>
+        <div class="code-meta"><span class="meta">${escapeHTML(item.category || "")}</span><span class="meta">Code: ${escapeHTML(item.code || "-")}</span><span class="meta">UOM: ${escapeHTML(item.uom || "-")}</span></div>
+      </div>
+      <div class="card-copy-actions">
+        <button class="mini-btn" type="button" data-add-item="${escapeHTML(item.id)}">${selectedIds.has(item.id) ? "Added" : "Add"}</button>
+        <button class="mini-btn" type="button" data-copy="${escapeHTML(item.tenantText || item.title || "")}" data-status="Tenant wording copied">Copy tenant</button>
+        <button class="mini-btn" type="button" data-copy="${escapeHTML(item.internalWording || item.description || item.title || "")}" data-status="Works wording copied">Copy works</button>
+      </div>
+    </article>`).join("")}</div>`;
+  $("addVisualBundle")?.addEventListener("click", () => addBundleItems(ids));
+  $("copyVisualBundle")?.addEventListener("click", () => copyText(items.map(item => codeFullCopy(item)).join("\n\n"), "Bundle copied"));
+  panel.querySelectorAll("[data-add-item]").forEach(button => {
+    button.addEventListener("click", () => addBundleItems([button.dataset.addItem]));
+  });
+  wireCopyButtons(panel);
+}
+
 function wireEvents() {
   document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => {
     document.querySelectorAll(".tab, .view").forEach(el => el.classList.remove("active"));
@@ -620,49 +762,37 @@ function wireEvents() {
     $(tab.dataset.view).classList.add("active");
     renderCodeResults();
     renderBank();
+    renderVisualBuilder();
   }));
 
-  fields.forEach(id => {
-    $(id)?.addEventListener("input", () => { updateOutputs(); scheduleAutoSave(); });
-    $(id)?.addEventListener("change", () => { updateOutputs(); scheduleAutoSave(); });
-  });
-  $("optionSearch")?.addEventListener("input", renderOptions);
-  $("categoryFilter")?.addEventListener("change", (e) => { currentCategory = e.target.value; renderOptions(); });
-  $("codeSearch")?.addEventListener("input", renderCodeResults);
-  $("codeCategoryFilter")?.addEventListener("change", (e) => { currentCodeCategory = e.target.value; renderCodeResults(); });
+  fields.forEach(id => $(id)?.addEventListener("input", updateOutputs));
+  fields.forEach(id => $(id)?.addEventListener("change", updateOutputs));
+  $("optionSearch").addEventListener("input", renderOptions);
+  $("categoryFilter").addEventListener("change", (e) => { currentCategory = e.target.value; renderOptions(); });
+  $("codeSearch").addEventListener("input", renderCodeResults);
+  $("codeCategoryFilter").addEventListener("change", (e) => { currentCodeCategory = e.target.value; renderCodeResults(); });
 
-  $("copyReport")?.addEventListener("click", () => copyText(reportPlainText(), "Report copied"));
-  $("downloadReport")?.addEventListener("click", () => downloadFile("tenant-report.txt", reportPlainText()));
-  $("printReport")?.addEventListener("click", () => window.print());
-  $("copyActions")?.addEventListener("click", () => copyText(actionText(), "Actions copied"));
-  $("downloadCsv")?.addEventListener("click", () => downloadFile("sor-actions.csv", csvText(), "text/csv"));
-  $("saveDraft")?.addEventListener("click", () => saveDraft(false));
-  $("clearDraft")?.addEventListener("click", clearDraft);
-  $("clearSelection")?.addEventListener("click", clearSelection);
-  $("themeToggle")?.addEventListener("click", toggleTheme);
-  $("addCustomItem")?.addEventListener("click", addCustomItem);
-  $("resetCustomBank")?.addEventListener("click", resetCustomBank);
-
-  // Keyboard: press / to focus the active search box
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
-      e.preventDefault();
-      const activeView = document.querySelector(".view.active");
-      const search = activeView?.querySelector('input[type="search"]') || $("optionSearch") || $("codeSearch");
-      search?.focus();
-    }
-  });
+  $("copyReport").addEventListener("click", () => copyText(reportPlainText(), "Report copied"));
+  $("downloadReport").addEventListener("click", () => downloadFile("tenant-report.txt", reportPlainText()));
+  $("printReport").addEventListener("click", () => window.print());
+  $("copyActions").addEventListener("click", () => copyText(actionText(), "Actions copied"));
+  $("downloadCsv").addEventListener("click", () => downloadFile("sor-actions.csv", csvText(), "text/csv"));
+  $("saveDraft").addEventListener("click", saveDraft);
+  $("clearDraft").addEventListener("click", clearDraft);
+  $("addCustomItem").addEventListener("click", addCustomItem);
+  $("resetCustomBank").addEventListener("click", resetCustomBank);
+  $("resetVisualSelection")?.addEventListener("click", () => { currentVisualHotspot = null; currentVisualSymptom = null; renderVisualBuilder(); });
 }
 
 function initApp() {
   if (appInitialised) return;
   appInitialised = true;
-  initTheme();
   wireEvents();
   setToday();
   loadDraft();
   populateFilters();
   renderOptions();
+  renderVisualBuilder();
 }
 
 wireAuth();

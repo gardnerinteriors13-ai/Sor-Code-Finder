@@ -1,60 +1,31 @@
 # SOR Code Finder & Tenant Report Builder v2.3
 
-A static browser app for Healthy Homes / damp and mould survey work.
+Private Healthy Homes prototype.
 
-## Changelog
+## What changed in v2.3
 
-### v2.3
-- **Dark mode** – toggle in the header (respects system preference, remembered)
-- **Auto-save** – drafts save automatically ~1s after changes
-- **Smarter search** – synonym expansion (mould/mold, fan/extractor, WC/toilet, cill/sill, DPC, etc.)
-- **Clear selection** button for findings
-- Keyboard shortcut: press `/` to focus the current search box
-- Accessibility: improved focus styles
-- Version badge and small UX polish
+- Added **Visual Damp & Mould Builder**.
+- Choose Damp & Mould, then room/area, then tap visible issues on the diagram.
+- Supports Bedroom, Living room, Bathroom, Kitchen and External wall/ground level.
+- Hotspots include mould patches, vents, window reveals, damp stained walls, lower wall staining, bath/shower sealant, WC boxing, render plinth, concrete/path DPC issues and rainwater goods.
+- Each symptom produces a suggested bundle of findings, causes, works, tenant wording and internal/SOR actions.
+- Click-to-copy remains for reports, SOR results, wording bank and visual bundles.
+- Password gate remains. Default prototype password: `healthyhomes`.
+- Full SOR code book remains loaded.
 
-## What is included
+## Upload notes
 
-- Full SOR code book search
-- Tenant-friendly report builder
-- Internal SOR/action list
-- Wording bank
-- Custom wording/code entries saved locally in the browser
-- Copy report and copy action list buttons
-- Click-to-copy controls on SOR search results
-- Basic prototype password entry screen
+Upload the files inside this folder to the repository root, replacing the existing files. Do not upload the folder itself.
 
-## Prototype password
+Expected repo root:
 
-Default password:
-
-```text
-healthyhomes
+```
+index.html
+style.css
+app.js
+data.js
+manifest.webmanifest
+README.md
 ```
 
-This is only a simple client-side gate for testing on GitHub Pages. It is useful for stopping casual access while the app is being shaped, but it is not proper security. Anyone who inspects the source code can work around it.
-
-To change the password, update the Base64 value in `app.js`:
-
-```js
-const AUTH_PASSWORD = atob("aGVhbHRoeWhvbWVz");
-```
-
-For example, Base64 encode your new password and replace the value inside `atob(...)`. This only hides the plain text from casual viewing; it is not proper security.
-
-## GitHub Pages setup
-
-Upload these files into the repo root:
-
-- `index.html`
-- `style.css`
-- `app.js`
-- `data.js`
-- `manifest.webmanifest`
-- `README.md`
-
-Do not upload the containing folder unless you intend to serve the app from a subfolder.
-
-## Notes
-
-The app stores drafts and custom wording in the user's browser using localStorage. No tenant data is sent to a server in this version.
+This static password gate is for private testing only. It is not proper security.
