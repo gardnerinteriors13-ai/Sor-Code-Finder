@@ -29,3 +29,10 @@ README.md
 ```
 
 This static password gate is for private testing only. It is not proper security.
+
+
+## v2.5 visual overlay update
+
+- Adds selected-defect overlays to the Visual Damp & Mould Builder.
+- Tapping a hotspot now visually highlights mould, damp staining, window reveal mould, failed sealant, boxing, DPC-bridging/high concrete, cracked render/wall issues, and rainwater/downpipe defects.
+- Keeps the v2.4 realistic room scenes, password gate, click-to-copy tools and full SOR code book.
