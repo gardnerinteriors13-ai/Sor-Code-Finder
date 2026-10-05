@@ -1,11 +1,9 @@
 (async function(){
-  const chunks=[];
-  for(let i=0;i<4;i++){
-    const r=await fetch("./app.b64."+i+".txt");
-    if(!r.ok) throw new Error("Missing app.b64."+i+".txt");
-    chunks.push(await r.text());
-  }
-  const text = new TextDecoder().decode(Uint8Array.from(atob(chunks.join("")), c => c.charCodeAt(0)));
+  const [a,b] = await Promise.all([
+    fetch("./app.b64.a.txt").then(r => { if(!r.ok) throw new Error("Missing app.b64.a.txt"); return r.text(); }),
+    fetch("./app.b64.b.txt").then(r => { if(!r.ok) throw new Error("Missing app.b64.b.txt"); return r.text(); })
+  ]);
+  const text = new TextDecoder().decode(Uint8Array.from(atob(a+b), c => c.charCodeAt(0)));
   (0, eval)(text);
 })().catch(e => {
   console.error(e);
