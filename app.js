@@ -1,17 +1,13 @@
-(async function () {
-  try {
-    const parts = [];
-    for (let i = 0; i < 5; i++) {
-      const res = await fetch("./app.part" + i + ".js");
-      if (!res.ok) throw new Error("Missing app.part" + i + ".js (" + res.status + ")");
-      parts.push(await res.text());
-    }
-    (0, eval)(parts.join(""));
-  } catch (err) {
-    console.error(err);
-    const pre = document.createElement("pre");
-    pre.style.cssText = "color:#c00;padding:1rem;white-space:pre-wrap";
-    pre.textContent = "App failed to load: " + err.message;
-    document.body.appendChild(pre);
+(async function(){
+  const chunks=[];
+  for(let i=0;i<4;i++){
+    const r=await fetch("./app.b64."+i+".txt");
+    if(!r.ok) throw new Error("Missing app.b64."+i+".txt");
+    chunks.push(await r.text());
   }
-})();
+  const text = new TextDecoder().decode(Uint8Array.from(atob(chunks.join("")), c => c.charCodeAt(0)));
+  (0, eval)(text);
+})().catch(e => {
+  console.error(e);
+  document.body.insertAdjacentHTML("beforeend", "<pre style=\"color:red;padding:1rem\">"+e.message+"</pre>");
+});
